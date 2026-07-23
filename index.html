@@ -1,0 +1,1244 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Karteikarten · Abschlussprüfung</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #0F1720;
+    color: #E8ECEF;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    padding: 20px 16px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .page { width: 100%; max-width: 640px; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .title { font-family: ui-monospace, 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; letter-spacing: .3px; }
+  .subtitle { font-size: 12px; color: #7C8B99; margin-top: 1px; }
+  .menu-btn {
+    background: #151F29; border: 1px solid #26313C; color: #B7C2CC;
+    border-radius: 8px; padding: 8px 12px; font-size: 12.5px; cursor: pointer; font-family: inherit;
+  }
+  .tab-row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab-btn {
+    flex: 1; min-width: 100px; border: 1px solid #26313C; border-radius: 10px; padding: 10px 0;
+    font-size: 13px; cursor: pointer; font-family: inherit; background: #151F29; color: #B7C2CC; transition: all .15s ease;
+  }
+  .tab-btn.active { background: #4FD1C5; color: #0F1720; border-color: #4FD1C5; font-weight: 700; }
+  .cat-panel { display: none; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; padding: 12px; background: #131C25; border: 1px solid #1E2933; border-radius: 12px; }
+  .cat-panel.open { display: flex; }
+  .chip { border: 1px solid #26313C; background: #151F29; color: #7C8B99; border-radius: 20px; padding: 6px 12px; font-size: 12.5px; cursor: pointer; font-family: inherit; transition: all .15s ease; }
+  .chip.active { background: #4FD1C520; border-color: #4FD1C5; color: #4FD1C5; }
+  .progress-row { margin-bottom: 18px; }
+  .progress-track { height: 4px; background: #1C2733; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg,#4FD1C5,#3AB8AC); transition: width .3s ease; }
+  .progress-label { margin-top: 8px; font-size: 12.5px; color: #7C8B99; font-family: ui-monospace, monospace; }
+  .stage { display: flex; justify-content: center; }
+  .flip-card { width: 100%; height: 320px; cursor: pointer; perspective: 1600px; }
+  .flip-inner { position: relative; width: 100%; height: 100%; transition: transform .5s cubic-bezier(.4,.2,.2,1); transform-style: preserve-3d; }
+  .flip-inner.flipped { transform: rotateY(180deg); }
+  .face { position: absolute; inset: 0; border-radius: 18px; padding: 28px 26px; display: flex; flex-direction: column; justify-content: space-between; backface-visibility: hidden; overflow-y: auto; }
+  .face-front { background: #151F29; border: 1px solid #26313C; }
+  .face-back { background: linear-gradient(160deg,#1B3A38,#152229); border: 1px solid #2E5854; transform: rotateY(180deg); }
+  .cat-label { font-family: ui-monospace, monospace; font-size: 11.5px; letter-spacing: 1px; text-transform: uppercase; color: #F2A65A; font-weight: 600; }
+  .cat-label-dark { font-family: ui-monospace, monospace; font-size: 11.5px; letter-spacing: 1px; text-transform: uppercase; color: #4FD1C5; font-weight: 600; }
+  .q-text { font-size: 21px; line-height: 1.45; font-weight: 500; color: #EDF1F3; }
+  .a-text { font-size: 17px; line-height: 1.5; font-weight: 400; color: #DCEAE8; }
+  .hint { font-size: 11.5px; color: #5C6A75; font-family: ui-monospace, monospace; }
+  .hint-dark { font-size: 11.5px; color: #5C8A85; font-family: ui-monospace, monospace; }
+  .mark-row { display: flex; gap: 10px; margin-top: 16px; }
+  .mark-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background: #151F29; border: 1px solid; color: #DCE3E8; border-radius: 10px; padding: 11px 0; font-size: 13.5px; cursor: pointer; font-family: inherit; }
+  .controls { display: flex; gap: 10px; margin-top: 18px; justify-content: center; }
+  .nav-btn { background: #151F29; border: 1px solid #26313C; color: #E8ECEF; border-radius: 10px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; transition: all .15s ease; }
+  .nav-btn:hover:not(:disabled) { background: #1C2733; }
+  .nav-btn:disabled { opacity: .3; cursor: default; }
+  .empty { color: #7C8B99; margin-top: 60px; text-align: center; }
+  svg.icon { width: 16px; height: 16px; }
+  .mode-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .mode-btn { flex: 1; border: 1px solid #26313C; border-radius: 10px; padding: 9px 0; font-size: 13px; cursor: pointer; font-family: inherit; background: #151F29; color: #B7C2CC; transition: all .15s ease; }
+  .mode-btn.active-cards { background: #4FD1C5; color: #0F1720; border-color: #4FD1C5; font-weight: 700; }
+  .mode-btn.active-quiz { background: #F2A65A; color: #0F1720; border-color: #F2A65A; font-weight: 700; }
+  .quiz-card { width: 100%; background: #151F29; border: 1px solid #26313C; border-radius: 18px; padding: 24px 24px 20px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .options-col { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+  .option-btn { text-align: left; padding: 14px 16px; border-radius: 12px; font-size: 14.5px; line-height: 1.45; cursor: pointer; font-family: inherit; color: #E8ECEF; background: #151F29; border: 1px solid #26313C; transition: all .15s ease; }
+  .option-btn.correct { background: #1B3A2E; border-color: #4FD1C5; color: #B7F5E8; }
+  .option-btn.wrong { background: #3A1F1F; border-color: #E06666; color: #F5C4C4; }
+  .option-btn.dim { background: #131A22; border-color: #1E2933; color: #5C6A75; }
+  .next-btn { width: 100%; margin-top: 16px; padding: 13px 0; border-radius: 10px; border: 1px solid #F2A65A; background: #F2A65A20; color: #F2A65A; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .skip-btn { width: 100%; margin-top: 16px; padding: 12px 0; border-radius: 10px; border: 1px solid #26313C; background: transparent; color: #7C8B99; font-size: 13.5px; cursor: pointer; font-family: inherit; }
+  .result-skipped { font-size: 12.5px; color: #7C8B99; }
+  .result-box { width: 100%; background: #151F29; border: 1px solid #26313C; border-radius: 18px; padding: 28px 26px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .result-score { font-size: 22px; font-weight: 700; color: #E8ECEF; }
+  .result-pct { font-size: 14px; color: #4FD1C5; font-family: ui-monospace, monospace; margin-bottom: 8px; }
+  .wrong-list { width: 100%; margin-top: 10px; display: flex; flex-direction: column; gap: 12px; }
+  .wrong-list-title { font-size: 12.5px; color: #7C8B99; font-family: ui-monospace, monospace; margin-bottom: 2px; }
+  .summary-box { width: 100%; margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .summary-row { display: flex; align-items: center; gap: 8px; }
+  .summary-cat-name { font-size: 12px; color: #B7C2CC; width: 130px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .summary-bar-track { flex: 1; height: 6px; background: #1C2733; border-radius: 4px; overflow: hidden; }
+  .summary-bar-fill { height: 100%; border-radius: 4px; transition: width .3s ease; }
+  .summary-cat-count { font-size: 11.5px; color: #7C8B99; font-family: ui-monospace, monospace; width: 34px; text-align: right; flex-shrink: 0; }
+  .summary-focus { font-size: 12.5px; color: #F2A65A; margin-top: 4px; font-weight: 600; }
+  .wrong-item { background: #131A22; border: 1px solid #1E2933; border-radius: 10px; padding: 12px 14px; }
+  .wrong-q { font-size: 13.5px; color: #DCE3E8; margin-bottom: 6px; }
+  .wrong-your { font-size: 12.5px; color: #E06666; margin-bottom: 2px; }
+  .wrong-correct { font-size: 12.5px; color: #4FD1C5; }
+  .restart-btn { margin-top: 18px; display: flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 10px; border: 1px solid #26313C; background: #1C2733; color: #E8ECEF; font-size: 14px; cursor: pointer; font-family: inherit; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="header-left">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+        <circle cx="7" cy="17" r="3" fill="#4FD1C5" />
+        <circle cx="27" cy="7" r="3" fill="#F2A65A" />
+        <circle cx="27" cy="27" r="3" fill="#F2A65A" />
+        <path d="M10 17 H24 M17 17 L24 7 M17 17 L24 27" stroke="#3A4956" stroke-width="1.5" />
+        <path d="M10 17 H24" stroke="#4FD1C5" stroke-width="1.5" stroke-dasharray="4 4">
+          <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.2s" repeatCount="indefinite" />
+        </path>
+      </svg>
+      <div>
+        <div class="title">Karteikarten</div>
+        <div class="subtitle">Abschlussprüfung</div>
+      </div>
+    </div>
+    <button class="menu-btn" id="menuBtn">Themen ▼</button>
+  </div>
+
+  <div class="mode-row">
+    <button class="mode-btn" id="modeCardsBtn">Karteikarten</button>
+    <button class="mode-btn" id="modeQuizBtn">Quiz</button>
+  </div>
+
+  <div class="tab-row" id="tabRow"></div>
+  <div class="cat-panel" id="catPanel"></div>
+
+  <div id="emptyState" class="empty" style="display:none;">Keine Karten in der Auswahl.</div>
+
+  <div id="cardArea">
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel"></div>
+    </div>
+
+    <div class="stage">
+      <div class="flip-card" id="flipCard">
+        <div class="flip-inner" id="flipInner">
+          <div class="face face-front">
+            <div class="cat-label" id="catLabelFront"></div>
+            <div class="q-text" id="qText"></div>
+            <div class="hint">Tippen zum Umdrehen</div>
+          </div>
+          <div class="face face-back">
+            <div class="cat-label-dark">Antwort</div>
+            <div class="a-text" id="aText"></div>
+            <div class="hint-dark">Tippen für Frage</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mark-row">
+      <button class="mark-btn" id="btnUnknown" style="border-color:#E0666650;">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#E06666" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Nochmal
+      </button>
+      <button class="mark-btn" id="btnKnown" style="border-color:#4FD1C550;">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#4FD1C5" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Gewusst
+      </button>
+    </div>
+
+    <div class="controls">
+      <button class="nav-btn" id="btnPrev">‹</button>
+      <button class="nav-btn" id="btnShuffle">⇄</button>
+      <button class="nav-btn" id="btnReset">↺</button>
+      <button class="nav-btn" id="btnNext">›</button>
+    </div>
+  </div>
+
+  <div id="quizArea" style="display:none;">
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="quizProgressFill" style="background: linear-gradient(90deg,#F2A65A,#D98A3D);"></div></div>
+      <div class="progress-label" id="quizProgressLabel"></div>
+    </div>
+
+    <div class="quiz-card" id="quizQuestionCard" style="display:none;">
+      <div class="cat-label" id="quizCatLabel"></div>
+      <div class="q-text" id="quizQText"></div>
+    </div>
+
+    <div class="options-col" id="quizOptions"></div>
+
+    <button class="skip-btn" id="quizSkipBtn">Überspringen</button>
+    <button class="next-btn" id="quizNextBtn" style="display:none;"></button>
+
+    <div class="result-box" id="quizResultBox" style="display:none;">
+      <div class="result-score" id="quizResultScore"></div>
+      <div class="result-skipped" id="quizResultSkipped" style="display:none;"></div>
+      <div class="result-pct" id="quizResultPct"></div>
+      <div class="summary-box" id="quizSummaryBox"></div>
+      <div class="wrong-list" id="quizWrongList"></div>
+      <button class="restart-btn" id="quizRestartBtn">↺ Neu starten</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DECK_NWT = [
+  // Grundlagen
+  { cat: "Grundlagen", q: "Welche Hardware-Komponente ermöglicht einem Rechner die Teilnahme am Netzwerk?", a: "Die Netzwerkkarte (NIC – Network Interface Card). Sie trägt die weltweit eindeutige MAC-Adresse und übernimmt das Senden/Empfangen von Frames auf Schicht 1+2. Ohne NIC (oder eine WLAN-Antenne als drahtloses Pendant) hat ein Rechner keinen physischen Zugang zum Netz." },
+  { cat: "Grundlagen", q: "Was macht ein Repeater?", a: "Er erhöht die Reichweite eines gesendeten Signals, indem er es regeneriert und weiterschickt. Er arbeitet rein auf Schicht 1 (Bitübertragung) und interpretiert die Daten dabei nicht – er ist also kein 'intelligentes' Gerät wie ein Switch." },
+  { cat: "Grundlagen", q: "Was macht ein Router?", a: "Er ermöglicht den Datenaustausch zwischen unterschiedlichen Netzwerken (Routing). Er arbeitet auf Schicht 3, wählt anhand der Ziel-IP und seiner Routingtabelle den passenden Weg und trennt dabei Broadcast-Domänen voneinander." },
+  { cat: "Grundlagen", q: "Switch vs. AccessPoint – was ist der Unterschied?", a: "Beide sind Kopplungselemente auf Schicht 2 innerhalb eines Netzes. Switch: drahtgebundene Verbindung (Kupfer/Glasfaser). AccessPoint: drahtlose Verbindung (WLAN) für Endgeräte ohne Ethernet-Anschluss." },
+  { cat: "Grundlagen", q: "Was sind Protokolle und welche Protokollfamilie wird meist verwendet?", a: "Protokolle sind verbindliche Regeln für die Kommunikation im Netzwerk (z.B. Format, Ablauf, Fehlerbehandlung). Heute dominierende Protokollfamilie: TCP/IP; früher u.a. auch IPX/SPX (Novell) oder NetBIOS gebräuchlich." },
+  { cat: "Grundlagen", q: "Wozu braucht ein Betriebssystem einen Treiber im Netzwerkkontext?", a: "Der Treiber bildet die LLC-Teilschicht (Logical Link Control) und verbindet die Netzwerkkarte mit dem Betriebssystem. Ohne ihn könnte das Betriebssystem die Hardware der NIC nicht ansprechen und keine Daten senden/empfangen." },
+  { cat: "Grundlagen", q: "Ist ein Server ein Endgerät?", a: "Ja, Server zählen zu den Endgeräten – genau wie PC, Tablet, Telefon oder Drucker. Der Unterschied zu Kopplungselementen (Switch, Router, AccessPoint) ist, dass Endgeräte Dienste anbieten oder in Anspruch nehmen, nicht primär Daten weiterleiten." },
+
+  // Klassifikation
+  { cat: "Klassifikation", q: "Was kennzeichnet ein LAN?", a: "Ein Local Area Network ist auf einen Standort begrenzt (ggf. sogar nur einen Raum) und nutzt keine Verbindungen von Telekommunikations-Drittanbietern. Eingesetzte, nicht-proprietäre Standards: Ethernet (IEEE 802.3) und WLAN (IEEE 802.11)." },
+  { cat: "Klassifikation", q: "Was kennzeichnet ein WAN?", a: "Ein Wide Area Network verbindet mehrere LANs verschiedener Standorte eines Unternehmens/einer Organisation, indem Leitungen von Drittanbietern (z.B. Telekommunikationsanbieter) genutzt werden – im Gegensatz zum LAN, das ohne Drittanbieter auskommt." },
+  { cat: "Klassifikation", q: "Was ist ein PAN, und welche Standards kommen zum Einsatz?", a: "Ein Personal Area Network hat eine Längenausdehnung von wenigen Metern und verbindet z.B. Smartphone, Kopfhörer oder Peripheriegeräte. Eingesetzte Standards: Bluetooth (IEEE 802.15) und USB." },
+  { cat: "Klassifikation", q: "Was ist ein SAN und wie unterscheidet es sich von NAS?", a: "SAN (Storage Area Network): eigenes, schnelles Netzwerk für Speichermedien, die von mehreren Servern gemeinsam verwaltet werden. NAS (Network Attached Storage): ein einzelner, eigenständiger Rechner mit reduziertem Betriebssystem, der ins Netzwerk eingebunden ist und dort Dateien speichert." },
+  { cat: "Klassifikation", q: "Nenne die zentralen Merkmale der Client-Server-Architektur.", a: "Server bieten Dienste an (Web, Mail, Datenbank, …) und übernehmen die netzwerkweite Verwaltung von Ressourcen. Eine Anmeldung im Netzwerk ist erforderlich, der Zugriff wird kontrolliert (z.B. Windows Active Directory / Domänenanmeldung). Es entstehen zusätzliche Kosten für dedizierte Server, Serversoftware/Lizenzen und Verwaltungs-Know-how." },
+  { cat: "Klassifikation", q: "Was ist charakteristisch für Peer-to-Peer-Netzwerke?", a: "Die Benutzer selbst entscheiden, ob ihr Rechner Dienste anbietet oder in Anspruch nimmt – ein Rechner kann also gleichzeitig Client und Server sein. Es gibt keine zentrale netzwerkweite Verwaltung und keine zusätzlichen Kosten, da jedes aktuelle Betriebssystem Datei-/Druckdienste anbieten kann. Geeignet nur für kleine bzw. private Umgebungen." },
+
+  // Adressierung
+  { cat: "Adressierung", q: "Welche 4 Adressarten gibt es im Netzwerk?", a: "MAC-Adresse (Schicht 2, physikalisch), IP-Adresse (Schicht 3, logisch), Port (Schicht 4, Anwendung) und Name (z.B. DNS-Name, für Menschen lesbar)." },
+  { cat: "Adressierung", q: "Wie lang ist eine MAC-Adresse und wie wird sie dargestellt?", a: "48 Bit (6 Byte), hexadezimal mit 12 Hexziffern, z.B. C8:5A:CF:B1:80:4C. Alternative Schreibweisen sind C8-5A-CF-B1-80-4C oder C85A.CFB1.804C – jeweils dieselbe Adresse, nur anders gruppiert." },
+  { cat: "Adressierung", q: "Wer vergibt die MAC-Adresse und wofür wird sie verwendet?", a: "Der Hersteller der Netzwerkkarte vergibt sie fest (physikalische Adresse), sie ist weltweit eindeutig. Verwendet wird sie ausschließlich zur netzinternen Adressierung auf Schicht 2 – über Netzgrenzen hinweg übernimmt das die IP-Adresse." },
+  { cat: "Adressierung", q: "Wie ist eine IPv4-Adresse aufgebaut?", a: "32 Bit, geschrieben als 4 Bytes dezimal, durch Punkte getrennt (z.B. 192.168.20.65). Es handelt sich um eine logische, administrativ zugewiesene Adresse mit hierarchischem Aufbau aus Netzanteil und Hostanteil, die ein Gerät im Netzwerk eindeutig identifiziert." },
+  { cat: "Adressierung", q: "Wie ist eine IPv6-Adresse aufgebaut?", a: "128 Bit, hexadezimal, 8 Blöcke à 4 Hexziffern, getrennt durch Doppelpunkte. IPv4 und IPv6 sind nicht kompatibel zueinander, weshalb viele Geräte im Dual-Stack-Betrieb beide Adressarten parallel führen." },
+  { cat: "Adressierung", q: "Was bezeichnet ein Port und wie viele Bit hat er?", a: "Ein Port bezeichnet die netzwerkfähige Anwendung auf dem Rechner (Schicht 4) und ist 16 Bit groß. Über die Kombination aus IP-Adresse und Port kann eine konkrete Anwendung auf einem konkreten Gerät eindeutig adressiert werden." },
+  { cat: "Adressierung", q: "Wie sind die Portbereiche eingeteilt?", a: "0–1023: well-known Ports für bekannte Standarddienste (z.B. HTTP, DNS). 1024–49151: registered Ports für sonstige Serveranwendungen (z.B. MySQL 3306, Spieleserver). 49152–65535: private/dynamic Ports, die der Client temporär für eine Verbindung wählt." },
+  { cat: "Adressierung", q: "Welche well-known Ports gehören zu HTTP, HTTPS und SSH?", a: "HTTP: 80, HTTPS: 443, SSH: 22. Ergänzend wichtig: FTP 20/21, Telnet 23, DNS 53 – alles well-known Ports im Bereich 0–1023." },
+  { cat: "Adressierung", q: "Welche Ports nutzen SMTP, POP3 und IMAP?", a: "SMTP (Port 25): Versenden von E-Mails, meist Client→Server bzw. Server→Server. POP3 (Port 110): Empfangen von E-Mails, die dabei i.d.R. vom Server gelöscht werden. IMAP (Port 143): Empfangen von E-Mails, die auf dem Server verbleiben und über mehrere Geräte synchron abrufbar sind." },
+  { cat: "Adressierung", q: "Welche Ports nutzt DHCP?", a: "Server: Port 67, Client: Port 68. Die gesamte Kommunikation (Discover/Offer/Request/ACK) läuft dabei zunächst als Broadcast ab, solange der Client noch keine eigene IP-Konfiguration besitzt." },
+
+  // DNS
+  { cat: "DNS", q: "Wofür steht DNS und wann wurde es eingeführt?", a: "Domain Name System, 1984 eingeführt – ein weltweites, hierarchisches Namenssystem. Die Hierarchie gliedert sich in Root-Domäne, Top-Level-Domäne (z.B. .de, .com), Hauptdomäne, optionale Subdomäne und schließlich den Rechnernamen." },
+  { cat: "DNS", q: "Was entspricht die Hosts-Datei und wo liegt sie unter Windows?", a: "Ein privates Adressbuch (Name → IP-Adresse) auf dem lokalen Rechner, das noch vor einer DNS-Anfrage konsultiert wird. Pfad unter Windows: C:\\windows\\system32\\drivers\\etc\\hosts – Einträge haben die Form 'IP-Adresse Name', z.B. 192.168.217.252 printer." },
+  { cat: "DNS", q: "Wie viele Root-DNS-Server gibt es weltweit?", a: "13 – sie bilden die oberste, autoritative Instanz der DNS-Hierarchie (Root-Domäne, gekennzeichnet durch einen abschließenden Punkt)." },
+  { cat: "DNS", q: "Was bedeutet 'Nicht autorisierende Antwort' bei nslookup?", a: "Sie zeigt an, dass der angefragte DNS-Server die betreffende Zone nicht selbst verwaltet und daher keine Garantie für die Korrektheit der gelieferten Antwort übernimmt (die Antwort stammt meist aus dessen Cache). Verwaltet der Server die Zone selbst, ist er autoritativ und die Zeile 'Nicht autorisierende Antwort' entfällt." },
+  { cat: "DNS", q: "Was macht ein freier DNS-Server wie 8.8.8.8?", a: "Er beantwortet Clientanfragen meist direkt aus seinem Cache, da dort schon die meisten Namensauflösungen vorliegen. Nur in seltenen Fällen müssen autoritative DNS-Server kontaktiert werden. Jede Namensauflösung hat dabei eine vom autoritativen Server festgelegte Gültigkeitsdauer (TTL)." },
+
+  // Konsolenbefehle
+  { cat: "Konsolenbefehle", q: "Wofür wird IPCONFIG /ALL genutzt?", a: "Zeigt die erweiterte Netzwerkkonfiguration des Rechners an: u.a. physische (MAC-)Adresse, DHCP-Status, IPv4-/IPv6-Adresse und Subnetzmaske. Ohne /ALL liefert IPCONFIG nur eine verkürzte Übersicht." },
+  { cat: "Konsolenbefehle", q: "Wofür wird GETMAC /V genutzt?", a: "Zeigt für alle Netzwerkadapter des Rechners die MAC-Adressen sowie Verbindungsname und Transportname an – auch für Adapter, die gerade nicht aktiv genutzt werden." },
+  { cat: "Konsolenbefehle", q: "Wofür wird TRACERT genutzt?", a: "Zeigt die Route (die Kette der passierten Router/Hops) zu einem Zielrechner an, indem es die TTL schrittweise erhöht und die ICMP-Fehlermeldungen (Time Exceeded) der Router auswertet." },
+  { cat: "Konsolenbefehle", q: "Wofür wird NETSTAT genutzt?", a: "Zeigt die aktuellen Verbindungen (offene TCP/UDP-Sockets) auf dem lokalen Rechner an – hilfreich, um zu sehen, mit welchen Zielen und Ports der Rechner gerade kommuniziert." },
+  { cat: "Konsolenbefehle", q: "Wofür wird ROUTE PRINT genutzt?", a: "Zeigt die lokale Routingtabelle des Clients an, also welche Zielnetze über welches Gateway/welche Schnittstelle erreichbar sind." },
+
+  // IPv4 Klassen
+  { cat: "IPv4-Klassen", q: "Welchen Wertebereich hat das 1. Byte bei Klasse A und wie ist sie aufgeteilt?", a: "0–127 (erstes Bit ist immer 0). Aufbau: 1 Byte Netzanteil, 3 Byte Hostanteil, Subnetzmaske 255.0.0.0 (/8). Es gibt 2^7 = 128 Klasse-A-Netze, jedes mit 2^24 Adressen – zur Hälfte aller IPv4-Adressen gehörend." },
+  { cat: "IPv4-Klassen", q: "Welchen Wertebereich hat das 1. Byte bei Klasse B und wie ist sie aufgeteilt?", a: "128–191 (erste 2 Bit sind '10'). Aufbau: 2 Byte Netzanteil, 2 Byte Hostanteil, Subnetzmaske 255.255.0.0 (/16). Es gibt 2^14 Klasse-B-Netze mit je 2^16 Adressen – ein Viertel aller IPv4-Adressen." },
+  { cat: "IPv4-Klassen", q: "Welchen Wertebereich hat das 1. Byte bei Klasse C und wie ist sie aufgeteilt?", a: "192–223 (erste 3 Bit sind '110'). Aufbau: 3 Byte Netzanteil, 1 Byte Hostanteil, Subnetzmaske 255.255.255.0 (/24), damit 254 nutzbare Rechneradressen (2^8 − 2). Es gibt 2^21 Klasse-C-Netze – ein Achtel aller IPv4-Adressen." },
+  { cat: "IPv4-Klassen", q: "Wofür werden Klasse D und Klasse E Adressen verwendet?", a: "Klasse D (erste 4 Bit '1110', 1. Byte 224–239): Multicastadressen, z.B. 224.0.0.5 für OSPF-Router untereinander. Klasse E (erste 4 Bit '1111', 1. Byte 240–255): reserviert, nicht für Rechneradressierung – 255.255.255.255 ist der allgemeine lokale Broadcast." },
+  { cat: "IPv4-Klassen", q: "Was ist APIPA und welcher Adressbereich gehört dazu?", a: "Automatic Private IP Addressing – Bereich 169.254.0.0/16. Rechner vergeben sich diese Adresse selbständig (link local), wenn kein DHCP-Server antwortet. Sie ist nur im lokalen Netz gültig und wird nicht geroutet." },
+  { cat: "IPv4-Klassen", q: "Welche privaten Adressbereiche gibt es (RFC 1918)?", a: "10.0.0.0/8 (10.0.0.0–10.255.255.255), 172.16.0.0/12 (172.16.0.0–172.31.255.255) und 192.168.0.0/16 (192.168.0.0–192.168.255.255). Diese Adressen werden nicht im Internet geroutet und können in unterschiedlichen privaten Umgebungen mehrfach verwendet werden." },
+  { cat: "IPv4-Klassen", q: "Wofür wird NAT benötigt und was ist der Adressbereich für Carrier-NAT?", a: "NAT (Network Address Translation) übersetzt private IP-Adressen in eine öffentliche (meist die des Routers) und umgekehrt, um öffentliche IPv4-Adressen einzusparen. Für ein zusätzliches, providerseitiges NAT (doppeltes NAT) ist der Bereich 100.64.0.0/10 reserviert." },
+  { cat: "IPv4-Klassen", q: "Wie wird die Netzadresse aus IP-Adresse und Subnetzmaske berechnet?", a: "IP-Adresse und Subnetzmaske werden binär mit logischem UND verknüpft (0 UND 0 = 0, 0 UND 1 = 0, 1 UND 1 = 1). Beispiel: 97.30.234.77 UND 255.0.0.0 ergibt binär 01100001.00000000.00000000.00000000, also die Netzadresse 97.0.0.0." },
+  { cat: "IPv4-Klassen", q: "Was ist die Bedeutung von UNICAST, MULTICAST, BROADCAST und ANYCAST?", a: "Unicast: Paket an genau einen Rechner. Multicast: Paket an eine definierte Gruppe von Rechnern (z.B. alle Router). Broadcast: Paket an alle Rechner im Netz (bei IPv6 nicht mehr vorhanden). Anycast: eine global gültige IP, die je nach Region in unterschiedliche tatsächliche IPs übersetzt wird (z.B. Google DNS 8.8.8.8 → nächstgelegener Server)." },
+
+  // Subnetting
+  { cat: "Subnetting", q: "Was ist das Ziel von Subnetting?", a: "Ein großes Netz wird in mehrere gleich große kleinere Netze unterteilt, um Adressen zu sparen. Dabei werden Hostbits als zusätzliche Netzbits verwendet – je mehr Bits abgezweigt werden, desto mehr (aber kleinere) Subnetze entstehen." },
+  { cat: "Subnetting", q: "Wie berechnet man die Anzahl der Subnetze und Hosts beim Subnetting?", a: "Anzahl Subnetze = 2^(Anzahl Subnetting-Bits). Anzahl nutzbarer Hostadressen pro Subnetz = 2^(verbleibende Hostbits) − 2, da die erste Adresse im Subnetz immer die Netzadresse und die letzte immer die Broadcastadresse ist." },
+  { cat: "Subnetting", q: "Was ist die 'Magic Number' beim Subnetting?", a: "Der Dezimalwert des niedrigstwertigen gesetzten Bits der Subnetzmaske im letzten relevanten Byte (z.B. bei 255.255.255.192 ist es 64). Er gibt die Sprunggröße zwischen den Netzadressen der einzelnen Subnetze an (hier also 64er-Sprünge: 0, 64, 128, 192)." },
+  { cat: "Subnetting", q: "Netzadresse, 1./letzte Rechneradresse und Broadcast für 192.168.30.96/28?", a: "Subnetzmaske /28 = 255.255.255.240, Magic Number 16, Netzgröße 16 Adressen. Netzadresse: 192.168.30.96. 1. Rechner: 192.168.30.97. Letzter Rechner: 192.168.30.110. Broadcast: 192.168.30.111 (14 nutzbare Hosts)." },
+  { cat: "Subnetting", q: "Wie lautet die Netzadresse von 172.18.10.69/26?", a: "172.18.10.64. Bei /26 bleiben 6 Hostbits, also 64er-Sprünge im letzten Byte (0, 64, 128, 192). 69 liegt zwischen 64 und 128, die Netzadresse ist daher 172.18.10.64 (binär: 172.18.10.01000101 UND 11000000 = 172.18.10.01000000)." },
+  { cat: "Subnetting", q: "Wie viele Hostbits werden mindestens für 2 nutzbare Rechneradressen benötigt?", a: "2 Hostbits (2^2 − 2 = 2 nutzbare Adressen). Sonderfall /31: wird für reine Transportnetze (z.B. Router-zu-Router-Verbindungen) verwendet, ganz ohne separate Netz- und Broadcastadresse." },
+
+  // DHCP
+  { cat: "DHCP", q: "Wofür steht DHCP und welche Parameter werden vergeben?", a: "Dynamic Host Configuration Protocol – automatische Vergabe der IP-Konfiguration (stateful DHCP). Vergeben werden u.a. IP-Adresse, Subnetzmaske, Standardgateway, DNS-Server, Domänenname, Zeitserver (NTP) sowie die Leasetime (Gültigkeitsdauer der Zuweisung)." },
+  { cat: "DHCP", q: "Wie lautet der DHCP-Ablauf (4 Schritte)?", a: "Discover (Client sucht per Broadcast einen DHCP-Server) → Offer (Server bietet eine IP-Konfiguration per Broadcast an) → Request (Client nimmt das Angebot per Broadcast an) → ACK (Server bestätigt per Broadcast). Alle vier Schritte laufen als Broadcast (MAC FFFF.FFFF.FFFF, IPv4 255.255.255.255)." },
+  { cat: "DHCP", q: "Welche Geräte haben im Regelfall statische statt dynamische IP-Adressen?", a: "Router, Server und Drucker – also Geräte, die dauerhaft unter derselben Adresse erreichbar sein müssen (z.B. damit DNS-Einträge oder Standardgateway-Angaben stabil bleiben)." },
+  { cat: "DHCP", q: "Was macht ein DHCP Relay Agent?", a: "Er leitet DHCP-Broadcasts, die im lokalen Netz keinen DHCP-Server finden, als Unicast an einen DHCP-Server in einem anderen Netz weiter. Er wird an der Routerschnittstelle des Netzes ohne eigenen DHCP-Server konfiguriert." },
+
+  // ARP/ICMP
+  { cat: "ARP & ICMP", q: "Wofür wird ARP verwendet?", a: "Address Resolution Protocol: ermittelt zu einer bereits bekannten IPv4-Adresse die zugehörige MAC-Adresse im lokalen Netz – notwendig, weil auf Schicht 2 letztlich mit MAC-Adressen adressiert wird." },
+  { cat: "ARP & ICMP", q: "Was ist ein ARP Request und was die Ziel-MAC dabei?", a: "Eine Anfrage, die als Broadcast versendet wird; die Ziel-MAC ist dabei FF:FF:FF:FF:FF:FF, da noch nicht bekannt ist, welcher Rechner antworten wird. Der gesuchte Rechner antwortet direkt (unicast) mit einem ARP Reply." },
+  { cat: "ARP & ICMP", q: "Was ist Gratuitous ARP?", a: "Ein Rechner gibt unaufgefordert (ohne vorherige Anfrage) seine eigene MAC-Adresse im Netz bekannt, z.B. ein Drucker oder Server nach dem Start – damit können andere Geräte ihre ARP-Tabellen direkt aktualisieren." },
+  { cat: "ARP & ICMP", q: "Wofür wird ICMP genutzt?", a: "Internet Control Message Protocol – u.a. Grundlage für PING (Echo Request/Reply) und TRACERT (Time Exceeded) sowie für allgemeine Fehlermeldungen wie 'Destination Unreachable', wenn ein Paket nicht zugestellt werden kann." },
+  { cat: "ARP & ICMP", q: "Was übernimmt NDP bei IPv6 anstelle von ARP?", a: "Neighbor Discovery Protocol (NDP), das auf ICMPv6 basiert, übernimmt u.a. die Funktion von ARP (Ermittlung der MAC-Adresse zu einer IPv6-Adresse über Neighbor Solicitation/Advertisement) sowie Router Solicitation/Advertisement zur Netzkonfiguration." },
+
+  // Schichtenmodelle
+  { cat: "Schichtenmodelle", q: "Welche 2 relevanten Schichtenmodelle gibt es?", a: "ISO/OSI-Modell (7 Schichten) und TCP/IP-Modell (4 Schichten). Beide unterteilen die Netzwerkkommunikation in hierarchisch angeordnete Teilaufgaben, wobei untere Schichten Dienste für obere Schichten bereitstellen." },
+  { cat: "Schichtenmodelle", q: "Auf welcher OSI-Schicht arbeiten Hub/Repeater, Switch/AccessPoint und Router?", a: "Hub/Repeater: nur Schicht 1 (Physical, reine Bitübertragung). Switch/AccessPoint: Schicht 1+2 (Data-Link, MAC-Adressierung). Router/Multi-Layer-Switch: Schicht 1 bis 3 (zusätzlich logische IP-Adressierung und Routing)." },
+  { cat: "Schichtenmodelle", q: "Welche OSI-Schichten sind transportorientiert, welche anwendungsorientiert?", a: "Schichten 1–4 (Physical, Data-Link, Network, Transport) sind transportorientiert – sie kümmern sich um den reinen Datentransport. Schichten 5–7 (Session, Presentation, Application) sind anwendungsorientiert und betreffen die eigentliche Nutzung durch Programme/Benutzer." },
+  { cat: "Schichtenmodelle", q: "Welche Schichten umfassen LAN-Standards?", a: "Schicht 1 (Physical/Bitübertragung) und Schicht 2 (Data-Link/Datensicherung). Beispiele: Ethernet (IEEE 802.3), WLAN (IEEE 802.11), Bluetooth (IEEE 802.15) mit den jeweiligen Zugriffsverfahren CSMA/CD bzw. CSMA/CA." },
+  { cat: "Schichtenmodelle", q: "Was ist die Aufgabe der Transportschicht?", a: "Segmentierung und Zusammenfügen der Nachrichten (mittels Sequenznummern), Namensauflösung über Ports, Flusssteuerung und – je nach Protokoll – zuverlässige Datenübertragung zwischen Endgeräten. Protokolle: TCP (zuverlässig, verbindungsorientiert) und UDP (schnell, verbindungslos)." },
+  { cat: "Schichtenmodelle", q: "Was ist die PDU (Protocol Data Unit) der Sicherungsschicht und wie groß ist sie standardmäßig?", a: "Die PDU heißt Frame – ein vollständig adressiertes Datenpaket, das bitweise verschickt wird. Standardgröße: 1500 Byte (Nutzdaten, ohne Ethernet-Header, FCS-Prüfsumme und Präambel)." },
+  { cat: "Schichtenmodelle", q: "Nenne den Unterschied zwischen Bandbreite, Throughput und Goodput.", a: "Bandbreite: theoretische maximale Anzahl an Bits pro Sekunde (z.B. Gigabit Ethernet = 1 Gbit/s). Throughput: tatsächlich übertragene Bits pro Sekunde. Goodput: davon nur die reinen Nutzdaten ohne Overhead. Es gilt: Bandbreite > Throughput > Goodput." },
+  { cat: "Schichtenmodelle", q: "Was ist der Unterschied zwischen synchroner und asynchroner Übertragung?", a: "Synchron: Sender und Empfänger sind über ein gemeinsames Taktsignal synchronisiert, Bits können jederzeit ohne Vorankündigung gesendet werden. Asynchron: Der Sender kündigt den Beginn einer Nachricht durch ein bestimmtes Bitmuster an, da kein gemeinsamer Takt existiert." },
+  { cat: "Schichtenmodelle", q: "Was unterscheidet Simplex, Halbduplex und Vollduplex?", a: "Simplex: Übertragung nur in eine Richtung möglich. Halbduplex: Übertragung in beide Richtungen, aber nicht gleichzeitig (z.B. klassisches Ethernet mit Hub). Vollduplex: beide Richtungen gleichzeitig möglich (z.B. moderne Switch-Verbindungen) – dadurch auch kollisionsfrei." },
+
+  // VLAN
+  { cat: "VLAN", q: "Was ist ein VLAN und zu welcher Schicht gehört es?", a: "Ein Virtual LAN unterteilt ein physikalisches Netz am Switch in mehrere logische Netze, unabhängig von der räumlichen/physischen Verkabelung. VLANs gehören zur Schicht 2 und setzen konfigurierbare (managed) Switches voraus." },
+  { cat: "VLAN", q: "Können sich VLANs über mehrere Switches oder über L3-Geräte erstrecken?", a: "Über mehrere Switches ja (das VLAN 'reist' über Trunk-Verbindungen mit), über L3-Geräte wie Router jedoch nicht – dort endet die logische Schicht-2-Trennung, und der Übergang zwischen VLANs erfolgt per Routing." },
+  { cat: "VLAN", q: "Was ist ein Management VLAN?", a: "Ein eigenes VLAN, das ausschließlich für Infrastrukturgeräte (Switches etc.) reserviert ist. Ein Switch erhält darüber eine eigene IP-Adresse und ist so über das Netz konfigurierbar – getrennt vom Daten- oder Voice-VLAN der normalen Nutzer." },
+  { cat: "VLAN", q: "Was ist ein Blackhole VLAN?", a: "Ein VLAN ohne jegliche zugewiesene Schnittstelle. Es wird empfohlen, es als natives VLAN zu verwenden, damit ungewollt untaggte Frames dort landen, statt versehentlich in ein produktives VLAN zu gelangen." },
+  { cat: "VLAN", q: "Was ist Trunking und welches Protokoll wird verwendet?", a: "Trunking überträgt Frames mehrerer VLANs über eine einzige physikalische Leitung, z.B. zwischen Switch und Router oder zwischen zwei Switches. Protokoll: IEEE 802.1q – dabei werden die Frames getaggt (mit VLAN-ID markiert) und statt des Standard-Ethernet-II-Headers wird der ETHERNET dot1q-Header verwendet." },
+
+  // Routing
+  { cat: "Routing", q: "Wie ist ein Eintrag in der Routingtabelle aufgebaut?", a: "Netz_ID, Subnetzmaske, ip_next_hop / ausgehende Schnittstelle. Anhand dieser Angabe entscheidet der Router, über welchen nächsten Hop bzw. welche eigene Schnittstelle ein Paket zu einem bestimmten Zielnetz weitergeleitet wird." },
+  { cat: "Routing", q: "Was ist die Standardroute (default route)?", a: "0.0.0.0 0.0.0.0 – sie passt auf jede beliebige Ziel-IP und wird deshalb nur dann gewählt, wenn keine spezifischere (genauere) Route in der Tabelle existiert." },
+  { cat: "Routing", q: "Nach welchem Kriterium wählt der Router die Route, wenn mehrere Netze passen?", a: "Er wählt die Route mit den meisten übereinstimmenden Netzbits, also die spezifischste/genaueste Route. Beispiel: Passt eine Ziel-IP sowohl in 172.20.0.0/19 als auch in die Standardroute 0.0.0.0/0, wird die /19-Route gewählt." },
+  { cat: "Routing", q: "Was ist Load Balancing auf Schicht 3?", a: "Gibt es 2 oder mehr gleichwertige (gleich gute) Routen zu einem Zielnetz in der Routingtabelle, verteilt der Router den Datenverkehr gleichmäßig auf sie (Round-Robin-Verfahren), statt nur eine Route zu nutzen." },
+  { cat: "Routing", q: "Was ist die Administrative Distanz und nenne Beispielwerte.", a: "Sie bewertet die Vertrauenswürdigkeit der Quelle einer Route. Gibt es zu einem Zielnetz Routen aus verschiedenen Quellen, wird die mit der niedrigsten Administrativen Distanz eingetragen. Werte: Connected 0, statisch 1 (Standard), OSPF 110, RIP 120, 255 = nicht verfügbar (wird verworfen)." },
+  { cat: "Routing", q: "Was ist der Unterschied zwischen statischem und dynamischem Routing?", a: "Statisch: der Administrator gibt jede Route fest vor (Zielnetz, Subnetzmaske, Next-Hop) – steigender Aufwand mit wachsender Netzwerkgröße, aber keine zusätzlichen Ressourcen nötig. Dynamisch: Router tauschen ihre bekannten Netze automatisch über ein Routingprotokoll aus – unabhängiger von der Netzwerkgröße, passt sich automatisch an Topologieänderungen an, benötigt aber mehr Ressourcen und eine konfigurierte Sicherheit." },
+  { cat: "Routing", q: "Wie ermittelt RIP die beste Route und was ist die Begrenzung?", a: "RIP ist ein Distanzvektor-Protokoll und misst nur die Anzahl der Hops (Router) bis zum Zielnetz, ohne Bandbreite oder Latenz zu berücksichtigen. Maximal erlaubt sind 15 Hops – 16 Hops bedeutet, dass das Netz als nicht erreichbar gilt." },
+  { cat: "Routing", q: "Wie ermittelt OSPF die beste Route?", a: "OSPF ist ein Link-State-Protokoll und berechnet Kosten aus einer Kombination von Bandbreite und Entfernung (z.B. 1 Gbit/s-Leitung bei Referenzbandbreite 10 Gbit/s → Kosten 10). Jeder Router kennt das gesamte Netz und berechnet die günstigste Route mit dem Dijkstra-Algorithmus." },
+  { cat: "Routing", q: "Nenne 2 Vorteile von OSPF gegenüber RIP.", a: "Die Bandbreite fließt in die Metrik ein (statt nur Hop-Anzahl), das Netz konvergiert nach Änderungen schneller, es gibt keine 15-Hop-Begrenzung, und das Routinggebiet kann in mehrere Areas unterteilt werden, um die Netzlast durch OSPF-Pakete zu reduzieren. Nachteil: höherer Ressourcenbedarf am Router." },
+
+  // IPv6
+  { cat: "IPv6", q: "Wie lang ist eine IPv6-Adresse und wie wird sie geschrieben?", a: "128 Bit; geschrieben als 8 Blöcke à 4 Hexziffern, getrennt durch Doppelpunkt (preferred format, ungekürzt mit 32 Hexziffern). In der Praxis wird meist die verkürzte Schreibweise verwendet." },
+  { cat: "IPv6", q: "Wie kürzt man 2001:000A:0000:0000:0000:0000:04C0:0001 korrekt?", a: "2001:A::4C0:1. Regeln: führende Nullen innerhalb eines Blocks weglassen (000A → A), und genau einmal in der Adresse einen zusammenhängenden Nullerblock durch einen doppelten Doppelpunkt (::) ersetzen." },
+  { cat: "IPv6", q: "Wie lautet die Standardpräfixlänge bei IPv6?", a: "64 Bit (/64). Die ersten 64 Bit bilden dabei das Präfix (die Netzadresse), die restlichen 64 Bit den Identifier (Hostanteil) – z.B. per SLAAC selbst generiert." },
+  { cat: "IPv6", q: "Welche IPv6-Adressbereiche gibt es (Global, Link Local, Unique Local)?", a: "Global Unicast: 2000::/3 – im Internet direkt erreichbar (vergleichbar mit öffentlichen IPv4-Adressen). Link Local: FE80::/10 – nur innerhalb des eigenen Netzes gültig, wird von jedem Gerät automatisch generiert. Unique Local: FC00::/7 – 'private' Adressen, die im Internet nicht geroutet werden." },
+  { cat: "IPv6", q: "Was ist SLAAC?", a: "Stateless Address Autoconfiguration – der IPv6-Rechner generiert sich sowohl seine link-local- als auch seine global-unicast-Adresse selbständig, ohne zwingend einen DHCPv6-Server zu benötigen. Präfix, Präfixlänge und Gateway erhält er dabei per Router Advertisement." },
+  { cat: "IPv6", q: "Was ist der Unterschied zwischen EUI-64-Verfahren und Privacy Extensions?", a: "EUI-64: die 48-Bit-MAC-Adresse wird durch Einfügen von FFFE in der Mitte auf 64 Bit gestreckt (zusätzlich wird das 7. Bit gedreht) – Nachteil: die MAC-Adresse ist im Klartext enthalten, der Rechner bleibt dauerhaft identifizierbar, daher nicht mehr empfohlen. Privacy Extensions: ein 64-Bit-Hashwert aus MAC-Adresse und Zeitstempel, der regelmäßig (spätestens bei jedem Neustart) neu generiert wird – dadurch keine Nachverfolgbarkeit über längere Zeit." },
+  { cat: "IPv6", q: "Was ist DAD (Duplicate Address Detection)?", a: "Der Rechner schickt ein Neighbor Solicitation Paket mit seiner eigenen, selbst generierten IPv6-Adresse ins Netz. Kommt keine Antwort (kein Neighbor Advertisement), ist die Adresse im Netz noch nicht vergeben und kann verwendet werden." },
+  { cat: "IPv6", q: "Gibt es bei IPv6 noch Broadcasts?", a: "Nein, bei IPv6 gibt es keine Broadcasts mehr. Ihre Funktion wird größtenteils durch Multicast-Adressen übernommen, z.B. ff02::1 für 'alle Rechner im Netz' oder ff02::2 für 'alle Router im Netz'." },
+
+  // ACL & NAT
+  { cat: "ACL & NAT", q: "Was ist eine ACL und ab wann spricht man von einer Firewall?", a: "Eine Access Control List enthält Regeln auf Schicht 3 und 4 (IP-Adressen, Protokolle, Ports). Wird sie auf einer Routerschnittstelle aktiviert (Befehl: IP ACCESS-GROUP nummer/name IN/OUT), spricht man von einer Firewall bzw. einem Paketfilter." },
+  { cat: "ACL & NAT", q: "Was ist der Unterschied zwischen stateful und stateless ACLs?", a: "Stateless: In beiden Richtungen (IN und OUT) gelten dieselben allgemeinen, unabhängigen Regeln. Stateful: In eine Richtung gelten allgemeine Regeln, in die Gegenrichtung werden nur Antwortpakete zu bereits vorher initiierten Kommunikationen zugelassen (zustandsbezogen)." },
+  { cat: "ACL & NAT", q: "Nach welchem Prinzip werden ACL-Einträge (ACEs) abgearbeitet?", a: "Nach dem Whitelist-Prinzip: alles ist verboten, was nicht ausdrücklich erlaubt wurde. Trifft eine Regel (ACE) zu, wird sie angewandt und alle nachfolgenden Einträge ignoriert – deshalb sollten Einträge vom spezifischen zum allgemeinen Fall sortiert werden, sonst kann eine allgemeine DENY-Regel eine später folgende, speziellere PERMIT-Regel unwirksam machen." },
+  { cat: "ACL & NAT", q: "Was ist der Unterschied zwischen Standard- und erweiterter ACL?", a: "Standard-ACL: filtert nur nach Absender-IP mit Wildcard-Maske, z.B. für NAT- oder Netzzugriffsberechtigungen. Erweiterte ACL: filtert zusätzlich nach Ziel-IP (mit Wildcard) sowie nach Protokoll (IP, ICMP, TCP, UDP, OSPF, …) und – bei TCP/UDP – nach Quell- und Zielport." },
+  { cat: "ACL & NAT", q: "Was ist NAT und wozu dient es?", a: "Network Address Translation übersetzt private IP-Adressen in öffentliche und umgekehrt. Dadurch lässt sich mit wenigen öffentlichen IPv4-Adressen eine große Anzahl privater Geräte ins Internet bringen – öffentliche Adressen werden so eingespart." },
+  { cat: "ACL & NAT", q: "Was ist PAT (Port Address Translation)?", a: "Mehrere private Client-Adressen werden im Regelfall auf dieselbe öffentliche Adresse des Routers übersetzt. Die einzelnen Kommunikationen der privaten Clients werden dabei durch unterschiedliche, vom Router vergebene Ports unterschieden." },
+  { cat: "ACL & NAT", q: "Was ist der Unterschied zwischen statischem NAT und Port Forwarding?", a: "Statisches NAT: einem Gerät (meist ein Server) mit privater IP wird dauerhaft eine feste öffentliche IP zugeordnet. Port Forwarding: zusätzlich wird ein bestimmter Port fest zugeordnet – so können mehrere Server unter derselben öffentlichen IP, aber unterschiedlichen Ports erreichbar sein." },
+
+  // TCP/UDP
+  { cat: "TCP & UDP", q: "Was passiert beim TCP 3-Way-Handshake?", a: "SYN (Client fragt Verbindung an) → SYN, ACK (Server bestätigt und fragt seinerseits an) → ACK (Client bestätigt). Erst danach gilt die Verbindung als aufgebaut und Nutzdaten werden übertragen. Der Abbau erfolgt über einen doppelten 2-Wege-Handshake mit FIN/ACK." },
+  { cat: "TCP & UDP", q: "Wofür steht das SYN-, ACK- und FIN-Flag bei TCP?", a: "SYN: Verbindungsanfrage (Verbindungsaufbau). ACK: Bestätigung eines empfangenen Segments. FIN: Anfrage zum Verbindungsabbau. Verbindungsaufbau nutzt die Flag-Folge [SYN]-[SYN,ACK]-[ACK], der Abbau [FIN]-[ACK]-[FIN]-[ACK]." },
+  { cat: "TCP & UDP", q: "Wofür stehen die TCP-Flags PSH und URG?", a: "PSH: Daten sollen sofort verschickt bzw. beim Empfänger sofort an die Anwendung weitergegeben werden, statt im Puffer auf mehr Daten zu warten (z.B. wenn keine weiteren Daten folgen). URG: wirkt wie PSH, zusätzlich werden die Daten gegenüber anderen im TCP-Puffer bevorzugt behandelt – typisch bei Telnet/SSH, wo jedes Zeichen sofort verschickt wird." },
+  { cat: "TCP & UDP", q: "Was ist die MSS (Maximale Segmentgröße) bei Ethernet/IPv4?", a: "MSS = MTU (bei Ethernet 1500 Byte) minus IP-Header minus TCP-Header. Bei IPv4 ergibt das 1460 Byte (1500 − 20 − 20)." },
+  { cat: "TCP & UDP", q: "Was ist der Unterschied zwischen TCP und UDP?", a: "TCP: verbindungsorientiert (3-Way-Handshake), zuverlässig durch Sequenznummern und Bestätigungen, fehlertolerant (erneutes Senden bei Verlust) – dadurch mehr Overhead und langsamer. UDP: verbindungslos, best effort (unzuverlässig), dafür schnell und mit wenig Overhead." },
+  { cat: "TCP & UDP", q: "Für welche Anwendungen wird typischerweise UDP genutzt?", a: "Zeitkritische Anwendungen wie Telefonie (VoIP), Videokonferenzen und Streaming, da ein erneutes Senden verlorener Pakete hier nicht sinnvoll wäre. Außerdem lokale Netzwerkverwaltung: DHCP, DNS-Abfrage, NTP, SNMP, TFTP." },
+  { cat: "TCP & UDP", q: "Was bewirkt das (Sliding) Window bei TCP?", a: "Es legt eine Obergrenze an Daten fest, die ohne Bestätigung verschickt werden darf, und schützt so den Empfängerpuffer vor Überlauf. Die Fenstergröße kann sich während der Übertragung dynamisch anpassen (daher 'sliding')." },
+  { cat: "TCP & UDP", q: "Wie groß ist der TCP-Header im Vergleich zum UDP-Header?", a: "TCP-Header: 20 Byte ohne Optionen (mit Feldern für Sequenz-/Bestätigungsnummer, Fenstergröße, Flags u.a.). UDP-Header: nur 8 Byte (Quellport, Zielport, Länge, Prüfsumme) – das erklärt den geringeren Overhead von UDP." },
+
+  // WLAN
+  { cat: "WLAN", q: "Nach welchem Standard ist WLAN genormt und welche Frequenzbereiche gibt es?", a: "IEEE 802.11. Frequenzbereiche: 2,4 GHz (teilt sich das Band mit anderen Technologien wie DECT/Bluetooth), 5 GHz (dringt schlechter durch Hindernisse, aber höhere Übertragungsraten) und neu 6 GHz." },
+  { cat: "WLAN", q: "Was ist der Unterschied zwischen BSS und ESS?", a: "BSS (Basic Service Set): genau 1 AccessPoint mit 1 SSID. ESS (Extended Service Set): mehrere APs unter derselben SSID → Roaming zwischen den APs ist möglich (Handover, Roaming-Protokoll IEEE 802.11r)." },
+  { cat: "WLAN", q: "Was ist das Hidden-Node-Problem und wie löst CSMA/CA es?", a: "Zwei Geräte erreichen zwar denselben AP, aber nicht sich gegenseitig, und wissen daher nichts von der jeweils anderen Übertragung – es drohen unbemerkte Kollisionen. Lösung durch CSMA/CA (Collision Avoidance): Geräte beantragen beim AP eine Sendeerlaubnis (RTS – Request to Send), der AP erteilt sie mit CTS (Clear to Send); danach kennen alle Teilnehmer die reservierte Zeitspanne und senden nicht dazwischen." },
+  { cat: "WLAN", q: "Was ist der Unterschied zwischen autonomem AP und Lightweight AP?", a: "Autonomer AP: führt die Authentifizierung selbständig durch und muss einzeln, eigenständig konfiguriert werden. Lightweight AP: wird zentral über einen WLC (Wireless LAN Controller) konfiguriert und leitet Authentifizierungsanfragen nur an diesen weiter." },
+  { cat: "WLAN", q: "Was sendet ein AccessPoint regelmäßig und mit welchen Informationen?", a: "Ein BEACON-Frame – mit seiner MAC-Adresse, der SSID (Netzwerkname), der Authentifizierungsmethode (z.B. WPA2 PSK) und den unterstützten Standards (z.B. 802.11ac). Darüber erkennen Clients das Netz, bevor sie sich verbinden." },
+
+  // Switch
+  { cat: "Switch", q: "Auf welcher OSI-Schicht arbeitet ein Switch und was interpretiert er?", a: "Schicht 2 (Datensicherungsschicht) nach Ethernet-Standard IEEE 802.3; er interpretiert MAC-Adressen, um Frames gezielt an den richtigen Port weiterzuleiten." },
+  { cat: "Switch", q: "Was macht ein Switch, wenn die Ziel-MAC eines Unicast-Frames unbekannt ist?", a: "Er flutet (flooded) das Frame an alle angeschlossenen Ports außer dem Eingangsport. Antwortet der gesuchte Rechner, lernt der Switch dessen MAC-Adresse und trägt sie mit dem zugehörigen Port in seine MAC-Adressentabelle ein – zusätzlich wird bei jedem eingehenden Frame auch die Absender-MAC geprüft und ggf. eingetragen." },
+  { cat: "Switch", q: "Was ist der Unterschied zwischen Store-and-Forward und Cut-Through?", a: "Store-and-Forward: der Switch empfängt das komplette Frame, bevor er es weiterleitet, und prüft dabei die FCS-Prüfsumme – fehlerhafte Frames werden verworfen. Cut-Through (2 Varianten): Fast Forward leitet bereits nach Empfang der Ziel-MAC weiter, Fragment Free erst nach den ersten 64 Byte (damit werden durch Kollisionen zerstörte Pakete erkannt) – beide Varianten sind schneller, aber ohne vollständige Fehlerprüfung." },
+  { cat: "Switch", q: "Warum ist ein Switch intern kollisionsfrei?", a: "Er verbindet Quell- und Zielport gezielt miteinander; ist der Zielport bereits belegt, puffert er die Daten statt sie gleichzeitig auf ein gemeinsames Medium zu senden. Der Kollisionsbereich beschränkt sich dadurch auf jeweils 2 Geräte (Switch–Endgerät bzw. Switch–Switch), bei Vollduplex-Betrieb entfallen Kollisionen komplett." },
+  { cat: "Switch", q: "Was ist der Unterschied zwischen einem Hub und einem Switch bezüglich der Bandbreite?", a: "Der Switch gibt jedem angeschlossenen Gerät die volle Bandbreite, da er intern jeden Port getrennt bedient. Beim Hub dagegen teilen sich alle angeschlossenen Geräte dieselbe Bandbreite, da er ein Signal einfach an alle Ports dupliziert (1 gemeinsame Kollisionsdomäne)." },
+];
+
+const DECK_PROG = [
+  // Grundlagen der Programmierung
+  { cat: "Grundlagen", q: "Was bedeutet das EVA-Prinzip?", a: "Eingabe → Verarbeitung → Ausgabe. Nach diesem Prinzip arbeiten praktisch alle Programme: Sie nehmen Daten entgegen (z.B. Tastatur), verarbeiten sie im Programm und geben das Ergebnis weiter (z.B. Monitor, an ein anderes Programm)." },
+  { cat: "Grundlagen", q: "Was ist ein Algorithmus?", a: "Die abstrakte, schrittweise Formulierung eines Lösungswegs. Er muss ein endlicher, vollständiger Text sein, bei gleichen Eingaben immer das gleiche (richtige) Ergebnis liefern, allgemeingültig auf alle zulässigen Daten anwendbar sein und ein eindeutiges Ende haben." },
+  { cat: "Grundlagen", q: "Welche 3 Grundstrukturen braucht jeder Programmentwurf?", a: "Sequenz (Anweisungsfolge, der Reihe nach abgearbeitet), Selektion (Auswahlstruktur/Bedingung, nur unter bestimmten Bedingungen ausgeführt) und Iteration (Wiederholungsstruktur/Schleife, wiederholt sich solange eine Abbruchbedingung erfüllt ist)." },
+  { cat: "Grundlagen", q: "Was ist Pseudocode?", a: "Die Formulierung eines Algorithmus in natürlicher oder an eine Programmiersprache angelehnter Sprache, ohne feste Regeln. Er soll Ablauf und Struktur verdeutlichen, unabhängig von der konkreten sprachlichen Umsetzung." },
+  { cat: "Grundlagen", q: "Was ist ein Programmablaufplan (PAP) und was ein Struktogramm?", a: "PAP (DIN 66001, Flow Chart): Anweisungen stehen in Kästchen, Pfeile geben die Laufrichtung an. Struktogramm (Nassi-Shneiderman-Diagramm, DIN 66261): jede Anweisung steht in einem verschachtelten Rechteck, ohne Pfeile." },
+  { cat: "Grundlagen", q: "Was ist ein Aktivitätsdiagramm (UML) und was unterscheidet es vom PAP?", a: "Eine moderne UML-Version des Programmablaufplans: Anweisungen stehen in Kästchen, Pfeile zeigen die Laufrichtung. Im Unterschied zum klassischen PAP können auch parallel laufende Prozesse sowie mehrere Start- und Endpunkte abgebildet werden." },
+  { cat: "Grundlagen", q: "Was ist der Unterschied zwischen Quellcode und Maschinencode?", a: "Quellcode ist der von Menschen lesbare Programmtext in einer Programmiersprache. Maschinencode sind die spezifischen Bytefolgen, die ein Prozessor direkt ausführen kann und die für Menschen nicht lesbar sind. Compiler/Interpreter übersetzen zwischen beiden." },
+  { cat: "Grundlagen", q: "Was ist der Unterschied zwischen Assembler und Hochsprachen?", a: "Assembler ist maschinennah: jede CPU hat ihre eigene Assemblersprache, der Code ist schwer lesbar und nicht auf andere CPUs übertragbar, dafür maximal schnell. Hochsprachen sind unabhängig von der konkreten Hardware, gut lesbar und erlauben deutlich komplexere Programme." },
+  { cat: "Grundlagen", q: "Was ist der Unterschied zwischen Compiler und Interpreter?", a: "Compiler: übersetzt den kompletten Code einmalig in eine ausführbare Datei, Fehler zeigen sich schon bei der Kompilierung, Ausführung ist schnell (z.B. C, C++, C#, Java). Interpreter: übersetzt bei jedem Aufruf zeilenweise neu, Fehler zeigen sich erst bei der Ausführung, dafür einfachere Entwicklung, aber langsamer (z.B. JavaScript, PHP, Perl)." },
+  { cat: "Grundlagen", q: "Was ist Bytecode / Just-in-Time (JIT) und wo wird es eingesetzt?", a: "Eine Mischung aus Compiler und Interpreter ('Compreter'): Es entsteht ein maschinennaher, aber hardware-unabhängiger Bytecode, den eine Laufzeitumgebung auf dem Zielsystem in Maschinencode umwandelt. Bekanntestes Beispiel: Java mit der JRE (Java Runtime Environment)." },
+  { cat: "Grundlagen", q: "Was ist der Unterschied zwischen einem Syntax- und einem Semantikfehler?", a: "Syntaxfehler verstoßen gegen die Schreibregeln/Grammatik der Sprache (z.B. 'innt' statt 'int', fehlendes Semikolon) – der Code lässt sich gar nicht erst korrekt übersetzen/ausführen. Semantikfehler sind syntaktisch korrekt, führen aber zu falschen Ergebnissen (z.B. das Ergebnis wird in der falschen Variable gespeichert)." },
+
+  // JavaScript Grundlagen
+  { cat: "JS Grundlagen", q: "Ist JavaScript eine Compiler- oder eine Interpretersprache, und wo läuft der Code?", a: "JavaScript ist eine Scriptsprache (Interpretersprache): der Code wird 'on the fly' beim Aufruf übersetzt. Klassisches (Vanilla) JavaScript ist clientseitig und läuft in der JavaScript-Engine des Browsers." },
+  { cat: "JS Grundlagen", q: "Was bedeutet 'Sandbox' im Zusammenhang mit JavaScript im Browser?", a: "JavaScript läuft im Browser in einer abgeschotteten Umgebung mit keinem oder nur stark eingeschränktem Zugriff auf Dateisystem, Hardware und Datenbanken des Clients – zum Schutz des Nutzers vor schädlichem Code." },
+  { cat: "JS Grundlagen", q: "Was sind V8, Node.js und Electron?", a: "V8: Googles JavaScript-Laufzeitumgebung (Rendering-Engine von Chrome), auch ohne Browser nutzbar. Node.js: baut auf V8 auf und ermöglicht JavaScript unabhängig vom Browser auszuführen (z.B. für Webserver). Electron: baut auf Node.js auf und ist ein Framework für plattformunabhängige Desktop-Anwendungen (z.B. MS Teams)." },
+  { cat: "JS Grundlagen", q: "Wie lässt sich JavaScript in eine HTML-Seite einbinden?", a: "Extern über <script src='datei.js'><\/script> (heute meist kurz vor </body> statt im <head>) oder intern direkt im HTML über <script>…<\/script>-Blöcke an beliebiger Stelle. Beide Varianten lassen sich beliebig kombinieren." },
+  { cat: "JS Grundlagen", q: "Welche Notationsregeln gelten in JavaScript?", a: "Jedes Statement steht in einer eigenen Zeile und endet mit Semikolon. JavaScript ist case sensitive (Groß-/Kleinschreibung wird unterschieden), Whitespace wird ignoriert. Kommentare: // für einzeilig, /* ... */ für mehrzeilig." },
+
+  // Variablen & Datentypen
+  { cat: "Variablen & Datentypen", q: "Was ist der Unterschied zwischen var und let?", a: "var ist funktionsorientiert (in der gesamten Funktion sichtbar, kann erneut deklariert werden – potenzielle Fehlerquellen). let (ES6) ist blockorientiert (nur innerhalb der { }-Klammern sichtbar) und kann nicht erneut deklariert werden – dadurch weniger fehleranfällig." },
+  { cat: "Variablen & Datentypen", q: "Was ist eine Konstante (const) und wie unterscheidet sie sich von einer Variable?", a: "Eine Konstante wird mit const deklariert, ist wie let blockorientiert, muss sofort bei der Deklaration einen Wert erhalten und kann diesen Wert danach nicht mehr ändern – im Gegensatz zu Variablen (let/var), deren Inhalt sich beliebig ändern kann." },
+  { cat: "Variablen & Datentypen", q: "Was ist der Unterschied zwischen starker und schwacher (dynamischer) Typisierung?", a: "Starke Typisierung: der Datentyp einer Variable muss bei Deklaration explizit festgelegt werden und ist danach fix (z.B. Java) – schneller, kompakter, Fehler fallen früh auf. Schwache/dynamische Typisierung: der Datentyp wird automatisch beim Zuweisen eines Werts festgelegt und kann sich im Programmverlauf ändern (z.B. JavaScript) – einfacher und flexibler, aber fehleranfälliger." },
+  { cat: "Variablen & Datentypen", q: "Welche wichtigen Datentypen kennt JavaScript?", a: "Number (Zahlen, keine Unterscheidung zwischen Integer und Fließkomma), String (Zeichenketten), Boolean (true/false), Object, sowie die Sonderformen undefined (kein Wert zugewiesen) und null (bewusst 'kein Wert')." },
+  { cat: "Variablen & Datentypen", q: "Welche Regeln gelten für Variablennamen in JavaScript?", a: "Nicht erlaubt sind Leerzeichen, Satzzeichen, führende Ziffern sowie reservierte Schlüsselwörter (Token) wie var. Best Practice: nur a–z, A–Z, 0–9 und Unterstrich _ verwenden." },
+  { cat: "Variablen & Datentypen", q: "Was passiert bei 'test' + 7 und bei '5' * 3 in JavaScript?", a: "'test' + 7 ergibt 'test7' (7 wird als Text interpretiert, Strings werden verkettet). '5' * 3 ergibt 15 (JavaScript interpretiert den String '5' erfolgreich als Zahl). Bei nicht interpretierbaren Strings wie 'test' * 3 entsteht NaN ('Not a Number')." },
+  { cat: "Variablen & Datentypen", q: "Wie wandelt man einen String in JavaScript in eine Zahl um?", a: "Über Number(a) oder die Kurzform a * 1 bzw. a + 0 (Multiplikation/Rechenoperation zwingt JavaScript zur Zahlkonvertierung). Ist der String nicht als Zahl interpretierbar, ist das Ergebnis NaN, der Datentyp wird aber trotzdem auf Number gesetzt." },
+  { cat: "Variablen & Datentypen", q: "Was sind Template Strings und wie schreibt man sie?", a: "Seit ES6 lassen sich Strings in Backticks ` ... ` schreiben, wobei Variablen/Ausdrücke direkt mit ${…} eingesetzt werden können, z.B. `${a} + ${b} = ${a + b}` – deutlich lesbarer als String-Verkettung mit +." },
+
+  // Operatoren
+  { cat: "Operatoren", q: "Was ist der Unterschied zwischen == und ===?", a: "== prüft nur auf gleichen Wert (Datentypen werden dabei ggf. umgewandelt), z.B. 4 == '4' ist true. === prüft auf Identität, also gleichen Wert UND gleichen Datentyp, z.B. 4 === '4' ist false." },
+  { cat: "Operatoren", q: "Was bewirken die logischen Operatoren && und ||?", a: "&& (AND/logisches UND) ist nur dann true, wenn beide Aussagen true sind. || (OR/logisches ODER) ist true, wenn mindestens eine der beiden Aussagen true ist." },
+  { cat: "Operatoren", q: "Was macht der Operator ! und wofür wird isNaN() benutzt?", a: "! (NOT) kehrt einen Wahrheitswert um (!true wird false). isNaN(wert) prüft, ob sich ein Wert NICHT als Zahl interpretieren lässt: liefert true bei Nicht-Zahlen, false bei Zahlen – häufig zur Kontrolle von Benutzereingaben genutzt." },
+  { cat: "Operatoren", q: "Was ist der ternäre Operator und wie sieht seine Syntax aus?", a: "Eine Kurzschreibweise für eine einfache if-else-Anweisung mit drei Operanden: (Bedingung) ? Wert_wenn_true : Wert_wenn_false; Beispiel: (alter >= 16) ? freigabe = true : freigabe = false;" },
+  { cat: "Operatoren", q: "Warum ist 'if (varEins = varZwei)' eine typische Fehlerquelle?", a: "Hier steht ein einfaches Gleichheitszeichen (=), das eine Zuweisung ist, keine Vergleichsabfrage (==). Die Zuweisung selbst hat (fast) immer den Wahrheitswert true, wodurch der else-Zweig nie erreicht wird – ein syntaktisch gültiger, aber logisch falscher Code." },
+
+  // Kontrollstrukturen
+  { cat: "Kontrollstrukturen", q: "Was ist der Unterschied zwischen einer kopfgesteuerten und einer fußgesteuerten Schleife?", a: "Kopfgesteuert (abweisend, z.B. while): die Bedingung wird VOR dem Schleifenrumpf geprüft – ist sie von Anfang an false, wird der Rumpf gar nicht durchlaufen. Fußgesteuert (annehmend, z.B. do-while): die Bedingung wird ERST NACH dem ersten Durchlauf geprüft – der Rumpf wird also immer mindestens einmal ausgeführt." },
+  { cat: "Kontrollstrukturen", q: "Was gibt folgender Code aus: let x = 5; while (x < 5) { console.log(x); x++ }?", a: "Gar nichts – die Bedingung x < 5 ist von Anfang an false (x ist bereits 5), daher wird der Schleifenrumpf bei der kopfgesteuerten while-Schleife kein einziges Mal ausgeführt. x bleibt bei 5." },
+  { cat: "Kontrollstrukturen", q: "Was gibt folgender Code aus: let x = 5; do { console.log(x); x++ } while (x < 5)?", a: "5 – die fußgesteuerte do-Schleife führt den Rumpf immer mindestens einmal aus, bevor die Bedingung geprüft wird. Danach ist x = 6, die Bedingung x < 5 ist false, die Schleife endet." },
+  { cat: "Kontrollstrukturen", q: "Wie ist der Kopf einer for-Schleife aufgebaut?", a: "for (Initialisierung; Bedingung; Veränderung) { … } – z.B. for (let i = 0; i < 10; i++). Initialisierung setzt den Startwert des Zählers, die Bedingung bestimmt, wie lange wiederholt wird, und die Veränderung wird nach jedem Durchlauf ausgeführt (z.B. Zähler um 1 erhöhen)." },
+  { cat: "Kontrollstrukturen", q: "Was ist der Unterschied zwischen == (Gleichheit) und !== (Ungleichheit mit Typ)?", a: "== prüft nur den Wert (mit Typumwandlung), != ist die entsprechende Negation. !== prüft dagegen, ob Wert ODER Datentyp unterschiedlich sind (Gegenstück zu ===) – 4 !== '4' ist also true, da die Datentypen unterschiedlich sind." },
+
+  // Funktionen
+  { cat: "Funktionen", q: "Was sind die zwei zentralen Vorteile von Funktionen?", a: "Sie erlauben modularisierten Code (komplexe Aufgaben werden in handliche, einzeln testbare Module aufgeteilt) und sie erlauben die mehrfache Ausführung identischer/ähnlicher Codebereiche, die nur einmal geschrieben werden müssen – das macht Code übersichtlicher, wartbarer und weniger fehleranfällig." },
+  { cat: "Funktionen", q: "Was bedeutet 'Kapselung' bei Funktionen?", a: "Eine Funktion ist eine 'Black Box' mit definierten Ein- und Ausgängen: der Code innerhalb ist von außen nicht einsehbar, intern deklarierte Variablen sind von außen nicht ansprechbar. Der Datenaustausch läuft ausschließlich über definierte Schnittstellen (Parameter, Rückgabewert)." },
+  { cat: "Funktionen", q: "Was ist der Unterschied zwischen Parametern und Argumenten?", a: "Parameter sind die Platzhalter für Werte in der Funktionsdefinition (z.B. function add(a, b)). Argumente sind die konkreten Werte, die beim Funktionsaufruf tatsächlich übergeben werden (z.B. add(7, 8) → 7 und 8 sind die Argumente)." },
+  { cat: "Funktionen", q: "Was bewirkt return in einer Funktion?", a: "Es gibt einen Wert an den aufrufenden Code zurück und beendet sofort die Ausführung der Funktion – der Code danach wird nicht mehr erreicht. Es können mehrere return-Anweisungen in einer Funktion vorkommen (je nach Bedingung)." },
+  { cat: "Funktionen", q: "Sind Variablen, die innerhalb einer Funktion mit let deklariert werden, auch außerhalb sichtbar?", a: "Nein – sie sind nur innerhalb der Funktion sichtbar (lokaler Gültigkeitsbereich). Eine gleichnamige Variable außerhalb der Funktion ist eine komplett andere, unabhängige Variable." },
+  { cat: "Funktionen", q: "Wie können Parameter mit einem Standardwert vorbelegt werden?", a: "Direkt in der Funktionsdefinition, z.B. function add(a = 0, b = 0) { … }. Wird beim Aufruf kein Argument für diesen Parameter übergeben, wird automatisch der Standardwert verwendet." },
+  { cat: "Funktionen", q: "Was ist eine anonyme Funktion / ein Funktionsausdruck (function expression)?", a: "Einer Variable/Konstante wird direkt der Funktionscode zugewiesen, ohne dass die Funktion selbst einen Namen bekommt, z.B. const add = function(a, b) { return a + b; }. Anonyme Funktionen werden nicht 'angehoben' (hoisting) und können erst nach ihrer Deklaration aufgerufen werden." },
+  { cat: "Funktionen", q: "Wie schreibt man eine Arrow Function und wann kann man auf Klammern verzichten?", a: "Kurzschreibweise für einen Funktionsausdruck: const add = (a, b) => { return a + b; }. Besteht der Rumpf nur aus einem return, können die { } entfallen: const sub = (a,b) => a-b;. Bei genau einem Parameter können auch die () entfallen: const mal10 = a => a * 10;." },
+
+  // Arrays
+  { cat: "Arrays", q: "Wie greift man in JavaScript auf ein Element eines Arrays zu?", a: "Über einen Index in eckigen Klammern, der bei 0 beginnt, z.B. namen[0] liefert das erste Element. Ein Zugriff über einen nicht existierenden Index (z.B. namen[9] bei nur 3 Elementen) liefert undefined." },
+  { cat: "Arrays", q: "Kann sich der Inhalt eines mit const definierten Arrays noch ändern?", a: "Ja – const macht nur den Verweis auf das Array konstant (das Array kann nicht durch ein komplett neues ersetzt werden), der Inhalt (einzelne Elemente) lässt sich dennoch beliebig ändern, z.B. playerOne[1] += 100;." },
+  { cat: "Arrays", q: "Wie ermittelt man die Anzahl der Elemente eines Arrays und wie durchläuft man es?", a: "array.length liefert die Anzahl (genauer: höchster Index + 1), nutzbar als Zähler in einer for-Schleife. Alternativen: for...of ('nimm das nächste Element') oder forEach(), das eine Callback-Funktion auf jedes Element anwendet." },
+  { cat: "Arrays", q: "Was ist der Unterschied zwischen einer for-Schleife/for...of und forEach() beim Durchlaufen von Arrays mit Lücken?", a: "for und for...of greifen auch auf Lücken im Array zu und liefern dort undefined. forEach() dagegen ignoriert nicht existierende (leere) Einträge komplett und wendet die Callback-Funktion nur auf tatsächlich vorhandene Elemente an." },
+  { cat: "Arrays", q: "Wie greift man auf ein Element in einem mehrdimensionalen Array zu?", a: "Mit mehreren Indizes hintereinander, z.B. myArray[0][2] für das dritte Element (Index 2) des ersten Unterarrays (Index 0). Damit lassen sich z.B. Tabellen abbilden." },
+  { cat: "Arrays", q: "Nenne 4 wichtige Array-Methoden und ihre Funktion.", a: "push(): fügt ein Element am Ende an. pop(): entfernt und liefert das letzte Element. unshift()/shift(): wie push/pop, aber am Anfang des Arrays. sort(): sortiert alphabetisch (Zahlen werden dabei als Strings behandelt!)." },
+
+  // Klassen & Objekte
+  { cat: "Klassen & Objekte", q: "Was ist der Unterschied zwischen einer Klasse und einem Objekt?", a: "Eine Klasse ist eine abstrakte Beschreibung ('Bauplan') mit den gemeinsamen Eigenschaften und Methoden aller Objekte dieses Typs – sie besitzt selbst keine konkreten Inhalte. Ein Objekt ist eine konkrete Instanz einer Klasse, abgeleitet über new, mit eigenen, individuellen Werten." },
+  { cat: "Klassen & Objekte", q: "Was sind Eigenschaften und was Methoden eines Objekts?", a: "Eigenschaften (Attribute/Properties) beschreiben, was ein Objekt 'ist' oder 'hat' (z.B. 'der Apfel ist rot'). Methoden beschreiben, was ein Objekt 'kann' (z.B. 'das Auto kann beschleunigen') – Methoden sind letztlich die Funktionen eines Objekts." },
+  { cat: "Klassen & Objekte", q: "Wie wird eine Klasse in JavaScript definiert und wie erzeugt man daraus ein Objekt?", a: "Mit class Name { constructor(...) { this.eigenschaft = wert; } }. Ein Objekt (eine Instanz) wird über das Schlüsselwort new erzeugt, z.B. const a1 = new Auto('VW', 'rot', 30.5); – die Werte werden dabei an den Constructor übergeben." },
+  { cat: "Klassen & Objekte", q: "Was ist der Unterschied zwischen public und private Eigenschaften/Methoden?", a: "private Eigenschaften/Methoden sind nur innerhalb des Objekts lesbar/veränderbar (Schutz vor unkontrolliertem Zugriff von außen). public Eigenschaften/Methoden sind von außen erreichbar und bilden die Schnittstelle des Objekts. Faustregel: Eigenschaften möglichst private, Methoden meist public." },
+  { cat: "Klassen & Objekte", q: "Was sind Getter und Setter?", a: "Methoden, über die kontrolliert auf private Eigenschaften zugegriffen wird, statt sie direkt zu manipulieren. Konvention: getEigenschaft() liest den Wert aus (Getter), setEigenschaft() setzt einen neuen Wert (Setter) – so behält das Objekt die volle Kontrolle darüber, wer was lesen/schreiben darf." },
+  { cat: "Klassen & Objekte", q: "Wie funktioniert Vererbung in JavaScript und wofür wird super benutzt?", a: "Mit dem Schlüsselwort extends wird eine Kindklasse von einer Elternklasse (Basisklasse) abgeleitet und übernimmt deren Eigenschaften/Methoden, ergänzt um eigene. super() ruft im Constructor der Kindklasse den Constructor der Elternklasse auf, um deren Eigenschaften zu initialisieren." },
+  { cat: "Klassen & Objekte", q: "Was ist der Unterschied zwischen einer abstrakten und einer konkreten Klasse?", a: "Konkrete Klassen lassen sich instanziieren, es können also Objekte von ihnen erzeugt werden (z.B. Rotwein). Abstrakte Klassen bilden keine eigenen Objekte, sondern dienen nur als Bauplan/Strukturelement für Unterklassen in der Klassenhierarchie (z.B. 'Alkoholisches Getränk')." },
+  { cat: "Klassen & Objekte", q: "Wie werden Klassen in einem UML-Klassendiagramm notiert?", a: "In einem dreigeteilten Rechteck: oben der (meist großgeschriebene) Klassenname, in der Mitte die Eigenschaften, unten die Methoden. Ein Pluszeichen (+) markiert public, ein Minuszeichen (-) markiert private Elemente." },
+
+  // Date & DOM
+  { cat: "Date & DOM", q: "Wie erzeugt man in JavaScript ein Datumsobjekt für den aktuellen bzw. einen beliebigen Zeitpunkt?", a: "new Date() erzeugt ein Objekt mit dem aktuellen Datum/Uhrzeit. Für ein beliebiges Datum übergibt man Jahr, Monatsindex (beginnt bei 0!), Tag usw., z.B. new Date(1961, 2, 27) für den 27.3.1961, oder im ISO-Format new Date('2010-03-15')." },
+  { cat: "Date & DOM", q: "Was ist das DOM (Document Object Model)?", a: "Eine vom Browser aus dem HTML-Code erzeugte, hierarchische Baumstruktur, in der jedes Element der Webseite einen exakt definierten Platz (Node) hat. Über JavaScript lässt sich das DOM komplett auslesen und verändern, was die angezeigte Webseite direkt beeinflusst." },
+  { cat: "Date & DOM", q: "Was liefern document.querySelector() und document.querySelectorAll()?", a: "querySelector('selector') referenziert nur das erste Element, auf das der CSS-Selektor zutrifft. querySelectorAll('selector') referenziert ALLE zutreffenden Elemente und gibt sie als NodeList zurück (kein echtes Array, aber mit length und Index nutzbar)." },
+  { cat: "Date & DOM", q: "Was ist der Unterschied zwischen innerHTML und textContent?", a: "innerHTML liest/schreibt den kompletten inneren HTML-Code eines Elements – enthaltener HTML-Code wird vom Browser gerendert. textContent behandelt den Inhalt dagegen als reinen Text; HTML-Code würde nicht gerendert, sondern als Text angezeigt (und ist i.d.R. schneller als innerHTML)." },
+
+  // PHP Grundlagen
+  { cat: "PHP Grundlagen", q: "Ist PHP eine client- oder serverseitige Sprache, und was bedeutet das?", a: "PHP ist serverseitig: der Code wird auf dem Server ausgeführt, nicht im Browser des Clients. Der Client sieht nur das fertige Ergebnis (HTML), der PHP-Quellcode selbst ist für ihn nicht einsehbar und kann von ihm auch nicht manipuliert oder unterbunden werden." },
+  { cat: "PHP Grundlagen", q: "Wofür steht PHP und wer hat es entwickelt?", a: "Ursprünglich 'Personal HomePage Tools', heute rekursiv 'PHP Hypertext Preprocessor'. Entwickelt 1995 von Rasmus Lerdorf, angelehnt an C und Perl – heute die populärste Sprache für serverseitige, dynamische Websites (u.a. Basis von WordPress)." },
+  { cat: "PHP Grundlagen", q: "Was passiert beim Abruf einer .php-Datei im Unterschied zu einer .html-Datei?", a: "Eine .html-Datei wird vom Webserver unverändert an den Client geschickt. Eine .php-Datei wird zuerst an den PHP-Interpreter übergeben, dort ausgeführt (kann z.B. auf Datenbanken zugreifen) – erst das erzeugte Ergebnis (reines HTML) wird an den Client gesendet." },
+  { cat: "PHP Grundlagen", q: "Wie werden PHP-Anweisungen im Quellcode markiert und wie sieht die Notation aus?", a: "Mit <?php ... ?>, einsetzbar an beliebiger Stelle im HTML-Code. Variablen beginnen mit $, Statements enden zwingend mit Semikolon, Whitespace wird ignoriert, PHP ist case sensitive. Kommentare wie in JS: // bzw. /* ... */." },
+  { cat: "PHP Grundlagen", q: "Welche Datentypen kennt PHP und wie werden sie zugewiesen?", a: "Integer, Float/Double, Boolean, String, Array, Object und NULL. PHP ist schwach typisierend – der Datentyp muss bei der Deklaration nicht angegeben werden, sondern ergibt sich automatisch aus dem zugewiesenen Wert." },
+  { cat: "PHP Grundlagen", q: "Wie funktioniert Type Casting in PHP?", a: "Der gewünschte Zieltyp wird in Klammern vor die Variable gesetzt, z.B. (int) $var, (string) $var, (bool) $var, (float) $var. Wird häufig benötigt, um Benutzereingaben (immer vom Typ String) in Zahlen umzuwandeln." },
+  { cat: "PHP Grundlagen", q: "Wie werden Strings in PHP verkettet, und worin unterscheidet sich das von JavaScript?", a: "In PHP werden Strings mit einem Punkt (.) verkettet, z.B. 'Das ist '.'ein Test'. Im Unterschied dazu wird in JavaScript für die String-Verkettung das Pluszeichen (+) verwendet." },
+  { cat: "PHP Grundlagen", q: "Was macht echo in PHP?", a: "Gibt Inhalte (Text, Variablen, Berechnungsergebnisse) direkt in das Dokument aus, vergleichbar mit document.write() in JavaScript, allerdings ohne Klammern, z.B. echo 'Das ist ein Test'; oder echo \"7 + 3 = \", (7 + 3);." },
+
+  // PHP Arrays
+  { cat: "PHP Arrays", q: "Wie legt man ein Array in PHP an und greift auf Elemente zu?", a: "Mit der Funktion array(wert1, wert2, …) oder der Kurzform [wert1, wert2, …]. Der Zugriff erfolgt wie in JavaScript über einen bei 0 beginnenden Index, z.B. $zahlen[0]." },
+  { cat: "PHP Arrays", q: "Was ist ein assoziatives Array in PHP?", a: "Ein Array, das statt eines numerischen Index frei wählbare Text-Schlüssel (Keys) verwendet, zugewiesen über key => value, z.B. $preise = array('1 Brot' => 2.55); – Zugriff dann über $preise['1 Brot']." },
+  { cat: "PHP Arrays", q: "Wie durchläuft man ein Array in PHP mit for bzw. foreach?", a: "Mit for wird die Anzahl der Elemente über count($array) ermittelt und als Schleifenbedingung genutzt. Mit foreach($array as $wert) wird kein Index benötigt – bei assoziativen Arrays: foreach($array as $key => $wert), um sowohl Schlüssel als auch Wert zu erhalten." },
+
+  // Formulare & GET/POST
+  { cat: "Formulare & GET/POST", q: "Welche zwei Attribute sind bei <form> zentral, und was ist ihr Standardverhalten?", a: "method ('get' oder 'post') und action (Pfad zum Auswertungsscript). Fehlt method, wird automatisch get benutzt. Fehlt action, ruft das Formular sich selbst zur Auswertung auf." },
+  { cat: "Formulare & GET/POST", q: "Was ist der zentrale Unterschied zwischen GET und POST?", a: "GET übergibt Daten sichtbar als URL-Parameter (einseh-/manipulierbar, als Bookmark speicherbar, begrenzter Umfang ~2048 Zeichen, nur ASCII). POST schickt Daten unsichtbar im Hintergrund als Teil des HTTP-Requests (nicht einfach einsehbar, nicht als Bookmark speicherbar, praktisch unbegrenzter Umfang, auch binäre Daten wie Uploads möglich)." },
+  { cat: "Formulare & GET/POST", q: "Wie werden mehrere URL-Parameter bei GET notiert?", a: "Mit einem ? wird der erste Parameter an die URL angehängt, weitere Parameter werden mit & verbunden, jeweils als name=wert, z.B. index.php?name=Peter&alter=42." },
+  { cat: "Formulare & GET/POST", q: "In welchen PHP-Variablen landen GET- bzw. POST-Daten, und wie greift man darauf zu?", a: "GET-Werte landen im assoziativen Array $_GET, POST-Werte in $_POST – jeweils mit dem Feld-/Parameternamen als Schlüssel, z.B. $_GET['a'] oder $_POST['vn']." },
+  { cat: "Formulare & GET/POST", q: "Was prüfen isset() und empty() in PHP, und wozu werden sie gebraucht?", a: "isset($a) liefert true, wenn die Variable $a existiert und nicht NULL ist. empty($a) liefert true, wenn $a leer/nicht vorhanden ist (auch bei false, 0 oder leerem String). Beide werden benutzt, um GET-/POST-Variablen vor der Verarbeitung zu prüfen." },
+  { cat: "Formulare & GET/POST", q: "Wie werden mehrere Auswahlmöglichkeiten (Checkboxen) als PHP-Array übergeben?", a: "Der name des Formularfelds erhält eckige Klammern, z.B. name='lw[]'. Nach dem Absenden existiert dann ein Array (z.B. $_POST['lw']), das alle ausgewählten value-Einträge in der Reihenfolge der Auswahl enthält." },
+
+  // HTML
+  { cat: "HTML", q: "Was ist HTML – und was ist es NICHT?", a: "HTML ist eine Auszeichnungssprache zur formalen Beschreibung der Gliederung/Struktur eines Dokuments. HTML ist KEINE Programmiersprache und KEINE Seitenbeschreibungssprache (wie z.B. Postscript) – das Aussehen/die Formatierung wird nicht in HTML, sondern in CSS beschrieben." },
+  { cat: "HTML", q: "Aus welchen zwei Bereichen besteht ein HTML-Dokument, und was gehört jeweils hinein?", a: "Head/Kopf: Metadaten (Titel, Zeichensatz, Autor, Datum etc.), nicht sichtbar auf der Seite selbst. Body/Körper: der eigentliche, sichtbare Inhalt des Dokuments." },
+  { cat: "HTML", q: "Welche zwei Angaben muss der <head>-Bereich für korrektes HTML5 zwingend enthalten?", a: "Den Seitentitel über <title>…</title> (wird in der Browser-Titelzeile angezeigt) und die Zeichensatzangabe über <meta charset='UTF-8'> (ohne schließendes Tag)." },
+  { cat: "HTML", q: "Was ist der Unterschied zwischen Block- und Inline-Elementen?", a: "Block-Elemente erzeugen eigene Absätze und passen sich der Fensterbreite an (z.B. <p>, <div>). Inline-Elemente stehen innerhalb von Absätzen und markieren nur einzelne Bereiche, ohne einen eigenen Absatz zu erzeugen (z.B. <strong>, <span>)." },
+  { cat: "HTML", q: "Welche drei Listenarten gibt es in HTML?", a: "Unordered List <ul> (unnummerierte Liste mit Bullet-Markierung), Ordered List <ol> (nummerierte Liste) und Description List <dl> (Beschreibungsliste aus Begriff <dt> und Erklärung <dd>, z.B. für Glossare). Einträge in <ul>/<ol> stehen jeweils in <li>." },
+  { cat: "HTML", q: "Wie werden Links notiert und was bedeuten '../' bzw. '/' bei Pfadangaben?", a: "Mit <a href='ziel'>Text</a>. '../' bedeutet: eine Ebene über dem aktuellen Verzeichnis. Ein führendes '/' bedeutet: Pfad ab dem Root-Verzeichnis (oberstes Verzeichnis der Seite). Ohne diese Zeichen wird im selben Verzeichnis gesucht." },
+  { cat: "HTML", q: "Wie bindet man ein Bild ein und wofür ist das alt-Attribut wichtig?", a: "Mit <img src='bild.png' alt='Beschreibung'> – ein Inline-Element ohne schließendes Tag. alt (alternate) zeigt einen Ersatztext, wenn das Bild nicht geladen werden kann, und ist außerdem wichtig für Barrierefreiheit/Screenreader." },
+  { cat: "HTML", q: "Wie ist eine HTML-Tabelle aufgebaut?", a: "<table>…</table> als Rahmen, Reihen mit <tr>, Zellen mit <td> ('table data'), Kopfzellen mit <th> ('table head'). Mit colspan/rowspan lässt sich der Inhalt einer Zelle über mehrere Spalten bzw. Reihen erstrecken." },
+  { cat: "HTML", q: "Was sind HTML-Entities, und wozu braucht man sie?", a: "Codierte Darstellungen für Sonderzeichen oder Zeichen, die der Browser sonst als Steuerzeichen interpretieren würde, z.B. &lt; für <, &amp; für &, &nbsp; für ein festes Leerzeichen. Sie beginnen mit & und enden mit ;, entweder als Name oder als numerischer Unicode-Wert (&#code;)." },
+  { cat: "HTML", q: "Nenne einige semantische HTML5-Strukturelemente und ihre Bedeutung.", a: "<main> (Hauptbereich der Seite), <nav> (Navigation/Menü), <article> (abgeschlossener Beitrag), <section> (fasst Abschnitte zusammen), <header>/<footer> (Kopf-/Fußbereich), <aside> (Randleiste, z.B. Werbung) – im Gegensatz zum neutralen <div> tragen sie inhaltliche Bedeutung." },
+
+  // CSS
+  { cat: "CSS", q: "Wie ist eine CSS-Anweisung aufgebaut?", a: "selektor { deklaration: wert; } – der Selektor wählt die Elemente aus, für die die Regel gilt; die Deklaration besteht aus Eigenschaft und Wert, getrennt durch Doppelpunkt, und endet mit Semikolon." },
+  { cat: "CSS", q: "Auf welche drei Arten lässt sich CSS mit HTML verbinden?", a: "Extern über <link href='styles.css' rel='stylesheet'> im <head> (empfohlen, wiederverwendbar). Intern über <style>…</style> im <head> (gilt nur für dieses Dokument). Inline über das Attribut style='...' direkt am Element (nur für Tests, gilt nur für dieses eine Element)." },
+  { cat: "CSS", q: "Was besagt die 'Kaskade' bei CSS-Konflikten?", a: "Je näher eine CSS-Regel an einem Element steht bzw. je spezifischer sie ist, desto eher überschreibt sie andere, weiter entfernte oder allgemeinere Regeln (Reihenfolge: Browser-Standard-CSS < externes CSS < <style> im Dokument < Inline-Style am Element)." },
+  { cat: "CSS", q: "Was bedeutet 'Vererbung' bei CSS?", a: "Viele CSS-Eigenschaften (z.B. Schriftfarbe) gelten nicht nur für das Element, für das sie definiert wurden, sondern automatisch auch für alle darin enthaltenen (Kind-)Elemente – sofern diese die Eigenschaft nicht selbst explizit überschreiben." },
+  { cat: "CSS", q: "Was ist der Unterschied zwischen einer Klasse (.name) und einer ID (#name) in CSS?", a: "Eine Klasse kann beliebig oft auf der Seite und auf mehreren Elementen gleichzeitig verwendet werden (Zuweisung über class, mehrere Klassen leerzeichengetrennt). Eine ID darf pro Seite nur genau einmal vergeben werden (Zuweisung über id) und dient der eindeutigen Ansprache eines einzelnen Elements – wichtig v.a. für JavaScript." },
+  { cat: "CSS", q: "Was ist der Nachfahrenselektor und wie wird er notiert?", a: "Er filtert Elemente, die innerhalb bestimmter anderer Elemente stehen, notiert durch ein Leerzeichen zwischen den Selektoren, z.B. ul li { … } wirkt nur auf li-Elemente innerhalb eines ul (nicht auf li in einem ol)." },
+  { cat: "CSS", q: "Aus welchen drei Bereichen besteht das CSS-Boxmodell?", a: "padding (Innenabstand zwischen Inhalt und Rand des Elements), border (der Rand/Rahmen selbst) und margin (Außenabstand zum nächsten Element). Reihenfolge bei Kurzschreibweise mit 4 Werten: oben – rechts – unten – links (im Uhrzeigersinn)." },
+  { cat: "CSS", q: "Was bewirkt box-sizing: border-box?", a: "Standardmäßig beziehen sich width/height nur auf den Inhalt des Elements (padding und border kommen zusätzlich oben drauf). Mit box-sizing: border-box beziehen sich width/height dagegen auf das komplette Element inklusive padding und border." },
+  { cat: "CSS", q: "Was ist der Unterschied zwischen position: relative und position: absolute?", a: "relative: das Element wird von seiner ursprünglichen Position aus verschoben, hinterlässt aber eine Lücke (der Platz bleibt reserviert). absolute: das Element wird komplett aus dem normalen Seitenfluss herausgenommen (keine Lücke), die Positionsangaben beziehen sich auf das nächste positionierte Elternelement (oder den Viewport)." },
+  { cat: "CSS", q: "Was ist der Unterschied zwischen transition und animation in CSS?", a: "transition definiert nur den zeitlichen Übergang zwischen zwei Zuständen eines Elements (z.B. bei :hover) und muss durch ein Ereignis ausgelöst werden. animation (zusammen mit @keyframes) kann dagegen automatisch starten, beliebig lange laufen und mehrere Zwischenschritte definieren." },
+  { cat: "CSS", q: "Wie funktioniert die Pseudoklasse :hover?", a: "Sie wird mit einem Doppelpunkt an einen Selektor angehängt (z.B. a:hover { … }) und trifft zu, sobald sich der Mauszeiger über dem betreffenden Element befindet – häufig genutzt, um z.B. bei Links Farbe oder Unterstreichung beim Überfahren zu ändern." },
+];
+
+const DECK_LINUX = [
+  // Grundlagen & Historie
+  { cat: "Grundlagen & Historie", q: "Was sind die charakteristischen Merkmale eines Linux-artigen Systems?", a: "Trennung von Kernel und Userspace-Programmen, modularer Aufbau (Unix-Philosophie: kleine Programme, die eine Sache gut machen), das Prinzip 'alles ist eine Datei', Multiuser von Anfang an mit klarer Trennung root vs. normale Nutzer, sowie Open Source (freier Quellcode)." },
+  { cat: "Grundlagen & Historie", q: "Wie ist Unix entstanden und was ist BSD?", a: "Unix entstand Ende der 1960er in den Bell Laboratories von AT&T (Ken Thompson, Dennis Ritchie). 1977 entstand an der Universität Berkeley eine Abspaltung namens BSD (Berkeley Software Distribution) – von Anfang an frei verfügbar, Grundlage von FreeBSD/OpenBSD/NetBSD, brachte u.a. TCP/IP-Netzwerk sowie die Tools vi und grep hervor." },
+  { cat: "Grundlagen & Historie", q: "Wie und wann entstand Linux, und warum nicht einfach BSD nutzen?", a: "Linus Torvalds begann Linux 1991 als Studentenprojekt in Helsinki – zunächst nur der Kernel, kein vollständiges Betriebssystem. Er wollte ein offenes, kostenloses System für PC-Hardware schaffen. BSD war zwar ebenfalls frei, litt aber Anfang der 90er unter rechtlicher Unsicherheit – ein neu geschriebener Kernel wirkte klarer und verbreitete sich schnell." },
+  { cat: "Grundlagen & Historie", q: "Woher kommt der Name 'Linux' und was ist Tux?", a: "Linux setzt sich aus 'Linus' (Torvalds) und 'Unix' zusammen. Tux, der Linux-Pinguin, wurde 1996 von Larry Ewing mit GIMP entworfen – Torvalds wollte einen zufriedenen Pinguin als Logo, inspiriert von einem Zoobesuch." },
+  { cat: "Grundlagen & Historie", q: "Wann wurde der Linux-Quellcode Open Source, unter welcher Lizenz, und was bedeutet 'Free Software'?", a: "1992 wurde der Quellcode unter der GPL (GNU General Public License) veröffentlicht – frei nutzbar, veränderbar und weiterverteilbar. 'Free Software' bedeutet laut Richard Stallman 'free as in freedom, not as free beer': es geht um die Freiheit zu nutzen, verändern und weitergeben, nicht zwingend um Kostenlosigkeit." },
+  { cat: "Grundlagen & Historie", q: "Was ist eine Linux-Distribution und nenne 3 Beispiele mit ihrem jeweiligen Schwerpunkt.", a: "Eine Distribution ist eine Sammlung von Softwarepaketen inkl. Linux-Kernel und Anwendungen, jeweils für bestimmte Einsatzgebiete optimiert. Beispiele: Ubuntu LTS (Langzeit-Support, Server/Unternehmen), Arch Linux (immer neueste Pakete, Rolling Release), Kali Linux (Penetrationstests/IT-Sicherheit), Debian (besonders stabil, konservative Entwicklung)." },
+  { cat: "Grundlagen & Historie", q: "Wonach sind Debian-Versionen benannt?", a: "Nach Charakteren aus Toy Story (z.B. Debian 12 'Bookworm', Debian 11 'Bullseye'), mit Ausnahme von Debian 5 'Etch', das auf die Zeichentafel 'Etch A Sketch' anspielt statt auf einen Toy-Story-Charakter." },
+  { cat: "Grundlagen & Historie", q: "Wo wird Linux heute überall eingesetzt?", a: "Vor allem auf Servern (Web-, DNS-, Dateiserver), aber auch auf Desktops/Laptops, Routern und Switches, Industrie-PCs, Embedded-Systemen (Smart-TVs, Kassensysteme), mobilen Geräten, Cloud-/Container-Plattformen und nahezu allen Supercomputern." },
+
+  // Shell & Befehle
+  { cat: "Shell & Befehle", q: "Was ist die Shell und was bedeutet der Name?", a: "Die Shell ist ein Programm zur Eingabe und Ausführung von Befehlen – die Schnittstelle zwischen Benutzer und Betriebssystem. 'Shell' bedeutet 'Hülle' und beschreibt die Schicht um den Betriebssystemkern." },
+  { cat: "Shell & Befehle", q: "Was ist die Bash und woher kommt der Name?", a: "Bash = Bourne Again Shell, ein Wortspiel zur ursprünglichen Bourne Shell (sh) von Stephen Bourne – 'Bourne Again' verweist darauf, dass Bash eine moderne, erweiterte Version davon ist. Sie ist die Standard-Shell in vielen Distributionen (z.B. Debian) und merkt sich u.a. die Befehlshistorie sowie Tab-Vervollständigung." },
+  { cat: "Shell & Befehle", q: "Was bedeuten die Zeichen $ und # als Shell-Prompt?", a: "$ zeigt an, dass ein normaler Benutzer angemeldet ist. # zeigt an, dass Root-Rechte vorliegen (Root-Benutzer). Beide Zeichen sind nicht Teil des eingegebenen Befehls, sondern zeigen nur, dass die Shell eingabebereit ist." },
+  { cat: "Shell & Befehle", q: "Was bewirken die Umleitungsoperatoren > und >>, und was der Pipe-Operator |?", a: "> überschreibt den Inhalt der Zieldatei mit der Ausgabe eines Befehls, >> hängt die Ausgabe ans Dateiende an. | (Pipe) leitet dagegen die Ausgabe eines Befehls direkt als Eingabe an den nächsten Befehl weiter, statt sie in eine Datei zu schreiben – so lassen sich Befehle zu Verarbeitungsketten verbinden." },
+  { cat: "Shell & Befehle", q: "Was machen die Befehle ls, cat und touch, und woher kommen ihre Namen?", a: "ls (list) listet Dateien/Verzeichnisse auf – einer der ersten Unix-Befehle. cat (concatenate) zeigt Dateiinhalte an, ursprünglich zum Zusammenfügen mehrerer Dateien gedacht (cat datei1 datei2 > zusammen.txt). touch legt eine leere Datei an oder aktualisiert nur ihren Zeitstempel ('berührt' die Datei, ohne sie zu ändern)." },
+  { cat: "Shell & Befehle", q: "Was ist der Unterschied zwischen cp, mv und rm?", a: "cp (copy) kopiert Dateien/Verzeichnisse, das Original bleibt erhalten. mv (move) verschiebt sie (keine Kopie) und kann auch zum Umbenennen genutzt werden. rm (remove) löscht Dateien dauerhaft." },
+  { cat: "Shell & Befehle", q: "Wie sind Befehlsoptionen aufgebaut, und was ist der Unterschied zwischen Kurz- und Langoptionen?", a: "Syntax: <befehl> [optionen] [argumente]. Kurzoptionen haben einen Bindestrich und können kombiniert werden (z.B. -la = -l -a). Langoptionen haben zwei Bindestriche (z.B. --verbose, --recursive) und sind ausführlicher lesbar, bewirken aber dasselbe wie die entsprechende Kurzoption." },
+  { cat: "Shell & Befehle", q: "Was ist der Unterschied zwischen man und --help?", a: "man (manual) öffnet ein ausführliches Handbuch mit Erklärungen, Beispielen und Hintergrundinfos (Beenden mit q, Suche mit / vorwärts bzw. ? rückwärts). --help zeigt nur eine kurze Übersicht der wichtigsten Optionen. Empfehlung: man bevorzugen, da ausführlicher." },
+  { cat: "Shell & Befehle", q: "Was bewirken die ls-Optionen -l, -a, -i, -s und -h?", a: "-l (long format): ausführliche Anzeige mit Rechten, Größe, Datum. -a (all): zeigt auch versteckte Dateien. -i: zeigt die Inode-Nummer. -s (size): Dateigröße in Blöcken. -h (human readable): Größen besser lesbar (KB/MB/GB)." },
+  { cat: "Shell & Befehle", q: "Was macht ein Alias, und wie wird er dauerhaft gespeichert?", a: "Mit alias kurzerName='langerBefehl' lassen sich lange Befehle abkürzen (z.B. alias ll='ls -l --color=auto'). Im Terminal erstellte Aliase gelten nur für die aktuelle Sitzung; dauerhaft werden sie in ~/.bashrc eingetragen und mit source ~/.bashrc neu geladen (oder neues Terminal öffnen)." },
+  { cat: "Shell & Befehle", q: "Was ist der Unterschied zwischen den Texteditoren vi, vim, nano und emacs?", a: "vi: klassischer Editor, fast überall vorinstalliert, aber ungewohnte Bedienung. vim (vi improved): alle vi-Funktionen plus Syntax-Highlighting, Undo u.a., nicht immer vorinstalliert. nano: sehr einfach für Einsteiger, aber weniger mächtig. emacs: extrem mächtiger Alleskönner, aber komplex zu lernen." },
+  { cat: "Shell & Befehle", q: "Was ist SSH und warum wird es telnet vorgezogen?", a: "SSH (Secure Shell) baut eine verschlüsselte Verbindung zu einem entfernten Rechner auf, auf dem ein SSH-Server läuft – dadurch lässt sich das System fernsteuern, als säße man direkt davor. Es ersetzt unsicheres telnet, weil alle Daten (Passwörter, Befehle, Ausgaben) verschlüsselt übertragen werden." },
+  { cat: "Shell & Befehle", q: "Wie lautet die Grundsyntax für eine SSH-Verbindung, und was bewirken -p und -i?", a: "ssh benutzername@server (Benutzername kann entfallen, wenn er lokal und remote gleich ist). -p <port>: Verbindung über einen anderen Port als Standard 22. -i <datei>: verwendet eine bestimmte private SSH-Schlüsseldatei (identity file)." },
+
+  // Rechte & Root
+  { cat: "Rechte & Root", q: "Was ist der Unterschied zwischen su und sudo?", a: "su (substitute/switch user) wechselt komplett in eine Root-Shell und benötigt das Root-Passwort. sudo (substitute user do) führt einen einzelnen Befehl mit Root-Rechten aus, ohne dauerhaft in eine Root-Sitzung zu wechseln – dabei wird protokolliert, wer was ausgeführt hat." },
+  { cat: "Rechte & Root", q: "Wie wird ein Benutzer für sudo freigeschaltet, und wie entzieht man die Rechte wieder?", a: "usermod -aG sudo <benutzer> fügt den Benutzer der sudo-Gruppe hinzu (Neuanmeldung nötig). usermod -rG sudo <benutzer> entfernt ihn wieder aus der Gruppe. Alternativ lassen sich mit visudo -f /etc/sudoers.d/<benutzer> auch nur einzelne Befehle gezielt erlauben." },
+  { cat: "Rechte & Root", q: "Warum sollten sudoers-Dateien immer mit visudo bearbeitet werden?", a: "visudo prüft die Syntax vor dem Speichern und sperrt die Datei gegen gleichzeitige Bearbeitung – fehlerhafte Einträge in den sudoers-Dateien könnten sonst die gesamte sudo-Nutzung blockieren. Der Name kommt historisch vom Editor vi, es wird aber je nach System auch nano o.ä. geöffnet." },
+  { cat: "Rechte & Root", q: "Welche drei Standardrechte gibt es unter Linux und wie werden sie mit ls -l dargestellt?", a: "Read (r): lesen, Write (w): ändern/schreiben, Execute (x): ausführen. Sie werden in ls -l als z.B. -rw-rw-r-- dargestellt: erstes Zeichen = Dateityp, danach je 3 Zeichen für Eigentümer, Gruppe und Andere." },
+  { cat: "Rechte & Root", q: "Wie berechnet man die oktale Schreibweise von Rechten, z.B. rwx?", a: "r=4, w=2, x=1, die Summe ergibt die Ziffer: rwx=4+2+1=7, rw-=6, r-x=5, -wx=3. Die drei Ziffern stehen immer in der Reihenfolge Eigentümer – Gruppe – Andere, z.B. chmod 755 = rwxr-xr-x." },
+  { cat: "Rechte & Root", q: "Was ist der Unterschied zwischen oktaler und symbolischer chmod-Schreibweise?", a: "Oktal setzt den kompletten Rechtezustand neu (z.B. chmod 755 datei). Symbolisch ändert gezielt einzelne Rechte für u (user), g (group), o (others) oder a (all) mit + / - / =, z.B. chmod u+x datei fügt nur dem Eigentümer das Ausführungsrecht hinzu, der Rest bleibt unverändert." },
+  { cat: "Rechte & Root", q: "Was ist der Unterschied zwischen chown und chgrp?", a: "chown (change owner) ändert den Eigentümer (optional gleichzeitig auch die Gruppe: chown eigentümer:gruppe datei) und erfordert i.d.R. Root-Rechte. chgrp (change group) ändert nur die Gruppenzugehörigkeit; ein normaler Benutzer kann das nur für eigene Dateien und nur zu Gruppen, in denen er selbst Mitglied ist." },
+  { cat: "Rechte & Root", q: "Was ist die umask, und was bewirkt umask 022?", a: "Die umask (user mask) legt fest, welche Rechte bei neu erstellten Dateien/Verzeichnissen standardmäßig entfernt werden. Ausgangsrechte sind 666 für Dateien und 777 für Verzeichnisse. Bei umask 022 werden Schreibrechte für Gruppe und Andere entfernt: Dateien werden 644 (rw-r--r--), Verzeichnisse 755 (rwxr-xr-x)." },
+  { cat: "Rechte & Root", q: "Was bewirkt das Sticky Bit, und wo wird es typischerweise eingesetzt?", a: "Es erlaubt gemeinsames Schreiben in ein Verzeichnis, schützt aber fremde Dateien vor Löschen/Umbenennen durch andere – nur Dateibesitzer, Verzeichnisbesitzer oder Root dürfen das. Klassisches Beispiel: /tmp (angezeigt als abschließendes t in ls -l, z.B. drwxrwxrwt)." },
+  { cat: "Rechte & Root", q: "Was bewirkt SetGID auf einem Verzeichnis, und was SetUID bei einem Programm?", a: "SetGID (Verzeichnis): neu angelegte Dateien/Unterverzeichnisse erben automatisch die Gruppe des Verzeichnisses statt der primären Gruppe des Erstellers – nützlich für gemeinsame Projektordner. SetUID (Programm): das Programm läuft mit den Rechten seines Besitzers statt des aufrufenden Benutzers, z.B. passwd (gehört root, damit normale Nutzer /etc/shadow ändern können)." },
+  { cat: "Rechte & Root", q: "Wie erkennt man Sticky Bit, SetGID und SetUID in der Ausgabe von ls -l?", a: "Sticky Bit steht als t an der letzten Stelle (Andere-Ausführen), z.B. drwxrwxrwt. SetGID zeigt sich als s an der 7. Stelle (Gruppe-Ausführen), z.B. drwxr-sr-x. SetUID zeigt sich als s an der 4. Stelle (Eigentümer-Ausführen), z.B. -rwsr-xr-x." },
+  { cat: "Rechte & Root", q: "Was besagt das Principle of Least Privilege (PoLP), und wie unterscheidet es sich von Zero Trust?", a: "PoLP: Benutzer und Prozesse erhalten nur die Rechte, die sie wirklich benötigen – weniger Rechte bedeuten geringeres Sicherheitsrisiko. Zero Trust ist umfassender: es beinhaltet PoLP, ergänzt aber zusätzlich das Prinzip der ständigen Verifizierung jedes Zugriffs ('Vertraue nichts automatisch')." },
+
+  // Verzeichnisse & Pfade
+  { cat: "Verzeichnisse & Pfade", q: "Was ist der Unterschied zwischen der Linux- und der Windows-Verzeichnisstruktur?", a: "Linux hat nur eine einzige Wurzel /, unter der alle Dateien und Laufwerke hängen. Windows hat mehrere Wurzeln – jedes Laufwerk (C:\\, D:\\ usw.) bildet eine eigene Wurzel." },
+  { cat: "Verzeichnisse & Pfade", q: "Wofür stehen /etc, /usr und /var?", a: "/etc (et cetera): systemweite Konfigurationsdateien. /usr (historisch 'user', heute Systemprogramme/Ressourcen wie /usr/bin, /usr/lib): durch die Paketverwaltung installierte, systemweite Software. /var (variable): dynamische, sich im Betrieb ändernde Daten wie Logs (/var/log) oder Cache (/var/cache)." },
+  { cat: "Verzeichnisse & Pfade", q: "Was ist der historische Unterschied zwischen /bin bzw. /sbin und /usr, und was ist 'usrmerge'?", a: "/bin und /sbin enthielten historisch die essenziellen Befehle fürs Booten/den Rettungsmodus (/sbin für Admin-Befehle). /usr enthält systemweite 'Userland'-Software. Bei 'usrmerge' sind /bin und /sbin auf modernen Systemen nur noch Symlinks auf /usr/bin bzw. /usr/sbin – inhaltlich gibt es dann keinen echten Unterschied mehr." },
+  { cat: "Verzeichnisse & Pfade", q: "Was sind /dev, /proc und /sys, und warum heißen sie 'virtuelle Verzeichnisse'?", a: "Sie werden beim Systemstart vom Kernel dynamisch im Arbeitsspeicher erzeugt statt auf der Festplatte zu liegen. /dev enthält Gerätedateien, /proc Informationen zu laufenden Prozessen, /sys Kernel- und Hardware-Schnittstellen. Trotzdem lassen sie sich mit normalen Tools wie cat oder ls lesen, da 'fast alles eine Datei ist'." },
+  { cat: "Verzeichnisse & Pfade", q: "Was ist der Unterschied zwischen /tmp und /run?", a: "/tmp enthält temporäre Dateien, die meist beim Neustart gelöscht werden. /run enthält ebenfalls Laufzeitdaten seit dem letzten Start (z.B. PID-Dateien, Sockets von Diensten), ist aber – im Gegensatz zu den rein virtuellen /proc und /sys – ein Ort für echte temporäre Dateien, die von Programmen tatsächlich abgelegt werden." },
+  { cat: "Verzeichnisse & Pfade", q: "Was ist der Filesystem Hierarchy Standard (FHS)?", a: "Ein Standard, an dem sich die meisten Linux-Distributionen orientieren: er legt fest, welche Standardverzeichnisse es gibt und wofür sie vorgesehen sind – dadurch sind Systeme unterschiedlicher Distributionen leichter zu administrieren und zu verstehen." },
+  { cat: "Verzeichnisse & Pfade", q: "Was ist der Unterschied zwischen relativen und absoluten Pfaden?", a: "Relative Pfade beziehen sich auf das aktuelle Arbeitsverzeichnis und können je nach Standort auf unterschiedliche Ziele zeigen (z.B. ls -l ../../). Absolute Pfade beginnen immer an der Wurzel / und sind unabhängig vom aktuellen Verzeichnis eindeutig (z.B. ls -l /home/stephan/Musik)." },
+  { cat: "Verzeichnisse & Pfade", q: "Wofür stehen pwd, die Tilde (~) und die Verzeichniszeiger . und ..?", a: "pwd (print working directory) gibt den absoluten Pfad des aktuellen Verzeichnisses aus. ~ ist eine Abkürzung für das Home-Verzeichnis des angemeldeten Benutzers (bei root: /root statt /home/root). . verweist auf das aktuelle Verzeichnis, .. auf das übergeordnete Verzeichnis." },
+  { cat: "Verzeichnisse & Pfade", q: "Wie sucht man mit find nach Dateien, und welche Kriterien gibt es?", a: "find <startpunkt> <optionen> durchsucht das Dateisystem live ab einem Startpunkt, z.B. find /etc -type f -name '*.conf'. Wichtige Kriterien: -name/-iname (Name, mit/ohne Beachtung von Groß-/Kleinschreibung), -type f/d/l (Dateityp), -size, -user, -group, -mtime/-atime (Änderungs-/Zugriffszeit), -perm (Rechte)." },
+  { cat: "Verzeichnisse & Pfade", q: "Was ist der Unterschied zwischen find und locate?", a: "find durchsucht das Dateisystem live und kann nach vielen Kriterien suchen (Größe, Typ, Besitzer usw.), ist aber langsamer. locate sucht nur nach Dateinamen, dafür extrem schnell, weil es über eine vorgenerierte Datenbank arbeitet – diese muss aber regelmäßig mit updatedb aktualisiert werden, sonst werden neue/verschobene Dateien nicht gefunden." },
+  { cat: "Verzeichnisse & Pfade", q: "Was ist der Unterschied zwischen einem symbolischen Link und einem Hardlink?", a: "Ein symbolischer Link verweist nur auf den Pfad einer Datei (wie eine Windows-Verknüpfung) und wird ungültig, wenn das Ziel gelöscht/verschoben wird; er kann auch auf Verzeichnisse und über Dateisystemgrenzen hinweg zeigen. Ein Hardlink ist ein zweiter echter Dateiname für denselben Dateiinhalt, bleibt auch beim Löschen des anderen Namens gültig, funktioniert aber nur innerhalb desselben Dateisystems und normalerweise nicht für Verzeichnisse." },
+
+  // Bootprozess
+  { cat: "Bootprozess", q: "Woher kommt der Begriff 'Booten', und welche Hauptkomponenten arbeiten beim Bootprozess zusammen?", a: "Booten ist die Kurzform von 'Bootstrap Loading' – eine Metapher für ein System, das sich 'am eigenen Stiefelriemen' aus eigener Kraft hochzieht. Zusammenarbeitende Komponenten: Firmware (BIOS/UEFI), Speichermedien, Linux-Kernel und das Init-/Startsystem (z.B. systemd)." },
+  { cat: "Bootprozess", q: "Was macht das BIOS, und wo an seine Grenzen stößt es bei moderner Hardware?", a: "BIOS (Basic Input/Output System) ist das erste Programm eines klassischen PCs: es initialisiert die Hardware (POST – Power-On Self Test) und startet den Bootloader. Es stammt von 1981 und kann u.a. keine Festplatten über 2 TB booten, keine NVMe-SSDs nutzen und bietet keine modernen Remote-Management-Funktionen." },
+  { cat: "Bootprozess", q: "Was ist UEFI, und welche wichtigen Sicherheitsfeatures bringt es mit?", a: "UEFI (Unified Extensible Firmware Interface) ist der moderne BIOS-Nachfolger: erweiterbar, mit eigener Shell, Unterstützung großer Datenträger/Partitionen. Wichtige Features: Secure Boot (prüft die Bootkette auf signierte Software) und TPM-Unterstützung (Trusted Platform Module)." },
+  { cat: "Bootprozess", q: "Was macht Secure Boot, und was ist Shim?", a: "Secure Boot stellt sicher, dass beim Systemstart nur signierte (vertrauenswürdige) Bootsoftware geladen wird – Schutz vor manipulierten Bootloadern. Shim ist ein kleiner, von Microsoft signierter Loader, der zwischen Secure Boot und GRUB vermittelt, damit auch nicht von Microsoft signierte Linux-Bootloader unter Secure Boot starten können." },
+  { cat: "Bootprozess", q: "Was ist ein TPM (Trusted Platform Module)?", a: "Ein Sicherheitschip, der Schlüssel und sensible Daten sicher speichert, eigene kryptografische Schlüssel erzeugen kann und dafür sorgt, dass ein System nicht unbemerkt verändert wird – genutzt u.a. für Secure Boot, Festplattenverschlüsselung und Systemintegrität. Aktueller Standard ist TPM 2.0." },
+  { cat: "Bootprozess", q: "Was ist der Unterschied zwischen MBR und GPT?", a: "MBR (Master Boot Record): klassisches Partitionsschema, 512 Byte, erster Sektor, max. 4 primäre Partitionen, max. Partitionsgröße ca. 2 TiB. GPT (GUID Partition Table): moderner UEFI-Nachfolger, unterstützt bis zu 128 Partitionen und bis zu 8 ZiB Größe, mit redundanter Partitionstabelle am Ende des Datenträgers." },
+  { cat: "Bootprozess", q: "Woran erkennt man einen gültigen MBR-Bootsektor?", a: "An der Magic Number: die letzten 2 Bytes des MBR sind immer 0x55 und 0xAA – dieses feste Binärmuster verhindert, dass zufällige Daten fälschlich als Bootsektor interpretiert werden." },
+  { cat: "Bootprozess", q: "Was ist GRUB, und wo liegen seine Konfigurationsdateien?", a: "GRUB (Grand Unified Bootloader) findet den Linux-Kernel (vmlinuz) und startet ihn, übergibt Kernel-Parameter und kann auch andere Betriebssysteme starten. Konfiguriert wird er über /etc/default/grub (von update-grub in /boot/grub/grub.cfg übersetzt – diese Datei nie manuell bearbeiten)." },
+  { cat: "Bootprozess", q: "Was passiert nach dem Laden des Kernels bis zum fertig gestarteten System (4 Schritte)?", a: "1) Kernel und initramfs werden in den RAM geladen und der Kernel entpackt/initialisiert sich. 2) Der Kernel erkennt und initialisiert Hardware/Treiber. 3) Das Root-Dateisystem wird eingebunden (ggf. vorher geprüft/repariert). 4) Der Kernel übergibt an das init-System (meist systemd, PID 1), das Dienste und Login-Möglichkeiten startet." },
+  { cat: "Bootprozess", q: "Was ist der Unterschied zwischen SysVinit (init.d) und systemd?", a: "SysVinit startet Dienste nacheinander über Shell-Skripte in fester Reihenfolge – einfach und nachvollziehbar, aber langsamer und mit begrenzter Abhängigkeitsverwaltung. systemd verwaltet Dienste als Units, kann viele parallel starten (schnellerer Boot), berücksichtigt Abhängigkeiten automatisch und sammelt Logs zentral über journald (abrufbar mit journalctl)." },
+
+  // Festplatten & RAID
+  { cat: "Festplatten & RAID", q: "Wie werden Festplatten unter Linux benannt, im Unterschied zu Windows-Laufwerksbuchstaben?", a: "Als Gerätedateien im Verzeichnis /dev, z.B. /dev/sda (ganze Festplatte), /dev/sda1 (erste Partition), /dev/nvme0n1 (NVMe-SSD) bzw. /dev/nvme0n1p1 (erste Partition davon) – statt Laufwerksbuchstaben wie C: oder D:." },
+  { cat: "Festplatten & RAID", q: "Was ist der Unterschied zwischen HDD, SSD (SATA) und NVMe-SSD?", a: "HDD: klassische mechanische Festplatte mit rotierenden Magnetscheiben, günstig aber langsam. SSD: elektronischer Speicher ohne bewegliche Teile, schnell, meist über SATA angebunden. NVMe-SSD: nutzt das PCIe-Interface und ein für SSDs optimiertes Protokoll – deutlich schneller als SATA-SSDs." },
+  { cat: "Festplatten & RAID", q: "Welche vier Schritte sind nötig, um eine neue Partition dauerhaft nutzbar zu machen?", a: "1) Partitionieren (z.B. mit fdisk). 2) Dateisystem erstellen (z.B. mkfs.ext4). 3) Mounten (Einhängen in den Verzeichnisbaum, z.B. unter /mnt/data). 4) Automatisch einbinden per Eintrag in /etc/fstab, damit es auch nach einem Neustart eingehängt wird." },
+  { cat: "Festplatten & RAID", q: "Was ist der Unterschied zwischen fdisk und parted?", a: "fdisk: klassisches, interaktives Terminal-Tool zur manuellen Partitionierung, unterstützt MBR und GPT. parted: flexibler, erlaubt präzise Größenangaben und kann nicht-interaktiv (skriptbar) genutzt werden – gut für Automatisierung und große Datenträger." },
+  { cat: "Festplatten & RAID", q: "Was steht in /etc/fstab, und warum wird die UUID statt des Gerätenamens empfohlen?", a: "/etc/fstab (file system table) legt fest, welche Dateisysteme beim Systemstart automatisch eingebunden werden (Gerät/UUID, Mountpoint, Dateisystemtyp, Optionen, Prüfreihenfolge). Die UUID ist zuverlässiger als /dev/sda1, weil sich Gerätenamen ändern können, wenn Datenträger in anderer Reihenfolge erkannt werden – die UUID bleibt dagegen stabil." },
+  { cat: "Festplatten & RAID", q: "Was ist ein Journaling-Dateisystem, und nenne zwei Beispiele.", a: "Es merkt sich vor Änderungen in einem 'Notizbuch' (Journal), was gleich passieren soll. Bei einem Absturz kann das System im Journal nachschauen und offene Änderungen abschließen oder verwerfen – das hält das Dateisystem konsistent. Beispiele: ext4 und XFS." },
+  { cat: "Festplatten & RAID", q: "Was bedeutet Copy-on-Write, und was sind btrfs-Subvolumes?", a: "Copy-on-Write: geänderte Daten werden nicht überschrieben, sondern an eine neue Stelle geschrieben – die alten Daten bleiben zunächst erhalten (ermöglicht Snapshots). btrfs-Subvolumes sind eigene, flexible Bereiche innerhalb eines btrfs-Dateisystems, die sich – anders als feste Partitionen – den gemeinsamen Speicherplatz teilen." },
+  { cat: "Festplatten & RAID", q: "Wofür stehen RAID und was sind die drei Hauptgründe für seinen Einsatz?", a: "RAID = Redundant Array of Independent Disks. Gründe: höhere Ausfallsicherheit/Verfügbarkeit (Daten bleiben bei Festplattenausfall verfügbar), mehr Geschwindigkeit (parallele Zugriffe) und größere logische Laufwerke (mehrere physische Platten erscheinen als ein Laufwerk)." },
+  { cat: "Festplatten & RAID", q: "Warum ist RAID kein Ersatz für ein Backup?", a: "RAID schützt nur vor Hardwareausfall, nicht aber vor versehentlichem Löschen, Malware/Ransomware, Fehlkonfiguration oder physischer Zerstörung (Feuer, Diebstahl, Wasserschaden). Ein Backup bleibt daher trotzdem notwendig." },
+  { cat: "Festplatten & RAID", q: "Was sind die Kerneigenschaften von RAID 0, RAID 1 und RAID 5?", a: "RAID 0 (Striping): max. Geschwindigkeit, keine Redundanz – ein Ausfall zerstört den ganzen Verbund. RAID 1 (Mirroring): Daten werden gespiegelt, 1 Platte darf ausfallen, aber nur die Hälfte des Speichers nutzbar. RAID 5 (verteilte Parität, min. 3 Platten): guter Kompromiss aus Speicherplatz, Geschwindigkeit und Ausfallsicherheit (1 Platte darf ausfallen)." },
+  { cat: "Festplatten & RAID", q: "Was unterscheidet RAID 6 von RAID 5, und was ist RAID 10?", a: "RAID 6 speichert zwei unabhängige Paritätsinformationen pro Stripe (min. 4 Platten) – bis zu 2 Platten dürfen ausfallen, dafür langsamer beim Schreiben und weniger nutzbarer Speicher als RAID 5. RAID 10 (= RAID 1+0, min. 4 Platten) kombiniert Spiegelung und Striping: schnell und ausfallsicher, aber nur ca. 50% Kapazität nutzbar." },
+  { cat: "Festplatten & RAID", q: "Was ist Parität bei RAID, und was ist ein Rebuild?", a: "Parität ist eine zusätzliche Kontrollinformation, aus der bei Ausfall einer Platte die fehlenden Daten rechnerisch (z.B. per XOR) wiederhergestellt werden können. Ein Rebuild ist der Wiederherstellungsprozess: die fehlenden Daten werden aus den übrigen Daten und der Parität neu berechnet und auf eine Ersatzplatte geschrieben – dabei sind die verbleibenden Platten stark belastet und ein weiterer Ausfall während des Rebuilds kann bei RAID 5 den ganzen Verbund zerstören." },
+  { cat: "Festplatten & RAID", q: "Was ist mdadm, und wie heißen Software-RAID-Geräte unter Linux?", a: "mdadm (multiple devices administration) ist das zentrale Linux-Werkzeug zum Erstellen, Verwalten und Überwachen von Software-RAIDs. Ein Software-RAID erscheint als eigenes Blockgerät, z.B. /dev/md0 – der Gerätename verrät dabei nichts über das verwendete RAID-Level." },
+
+  // Paketmanagement
+  { cat: "Paketmanagement", q: "Was ist 'Dependency Hell', und wie mildern Distributionen dieses Problem ab?", a: "Dependency Hell entsteht, wenn Programme unterschiedliche (inkompatible) Versionen derselben Bibliothek benötigen und schon ein kleines Update eine ganze Kette von Änderungen/Konflikten nach sich zieht. Distributionen wie Debian mildern das durch Package Maintainer ab, die Pakete aufeinander abstimmen und testen, bevor sie in die offiziellen Repositories kommen." },
+  { cat: "Paketmanagement", q: "Was ist der Unterschied zwischen dpkg und apt?", a: "dpkg ist ein Low-Level-Werkzeug: installiert/entfernt einzelne .deb-Pakete, löst Abhängigkeiten aber nicht automatisch auf. apt (High-Level, baut intern auf dpkg auf) löst Abhängigkeiten automatisch auf, verwaltet Paketquellen (Repositories) und kann ganze Systeme aktualisieren." },
+  { cat: "Paketmanagement", q: "Welche wichtigen dpkg-Befehle gibt es, und was ist der Unterschied zwischen -r und -P?", a: "dpkg -i <paket.deb>: installieren. dpkg -l: alle installierten Pakete anzeigen. dpkg -r <paket> (remove): entfernt das Paket, lässt aber Konfigurationsdateien zurück. dpkg -P <paket> (purge, großes P!): entfernt das Paket vollständig inklusive Konfigurationsdateien." },
+  { cat: "Paketmanagement", q: "Welche wichtigen apt-Befehle gibt es?", a: "apt update: Paketlisten aus den Quellen aktualisieren (vor Installationen wichtig). apt install <paket>: Paket installieren. apt upgrade: installierte Pakete aktualisieren. apt search <paket>: nach Paketen suchen. apt show <paket>: Paketinfos anzeigen. apt autoremove: nicht mehr benötigte, automatisch installierte Abhängigkeiten entfernen." },
+  { cat: "Paketmanagement", q: "Wo werden APT-Paketquellen (Repositories) konfiguriert, und was bedeuten die Debian-Komponenten main/contrib/non-free?", a: "In /etc/apt/sources.list bzw. zusätzlichen Dateien unter /etc/apt/sources.list.d/. main: freie Software nach Debian-Richtlinien. contrib: freie, community-beigesteuerte Software mit unfreien Abhängigkeiten. non-free: proprietäre Software, die nicht den Debian-Richtlinien entspricht." },
+  { cat: "Paketmanagement", q: "Was ist ein Mirror im Zusammenhang mit Paketquellen?", a: "Ein zusätzlicher Server, der eine Kopie des Debian-Paketarchivs bereithält und regelmäßig mit dem Original synchronisiert ('spiegelt') – dadurch können Nutzer Pakete schneller und näher am eigenen Standort herunterladen." },
+  { cat: "Paketmanagement", q: "Was sind die Nachteile der klassischen Installation aus dem Quellcode (compilieren)?", a: "Zeitaufwendig (Kompilieren kann lange dauern), aufwendige manuelle Schritte (configure, make, make install), fehleranfällig, benötigt zusätzliche Build-Werkzeuge (Compiler u.a.) und erfordert, dass alle Abhängigkeiten in passender Version selbst besorgt werden." },
+
+  // Benutzerverwaltung
+  { cat: "Benutzerverwaltung", q: "Was steht in /etc/passwd, und warum liegen Passwort-Hashes heute in /etc/shadow statt dort?", a: "/etc/passwd enthält Benutzername, UID, primäre GID, Home-Verzeichnis und Shell – die Datei muss für alle lesbar sein, damit Programme sie nachschlagen können. Da /etc/shadow nur von root gelesen werden darf, verhindert die Auslagerung der Passwort-Hashes dorthin, dass jeder Benutzer diese Hashes kopieren und für Wörterbuch-/Brute-Force-Angriffe nutzen kann." },
+  { cat: "Benutzerverwaltung", q: "Was ist der Unterschied zwischen primärer und sekundärer Gruppe, und was ist das User-Private-Group-Modell?", a: "Die primäre Gruppe ist die Standardgruppe eines Benutzers (neue Dateien gehören ihr standardmäßig), sekundäre Gruppen dienen zur Vergabe zusätzlicher Rechte (z.B. sudo, docker). Beim User-Private-Group-Modell bekommt jeder Benutzer automatisch eine eigene, gleichnamige primäre Gruppe – so landen neue Dateien nicht automatisch in einer von mehreren Benutzern geteilten Gruppe." },
+  { cat: "Benutzerverwaltung", q: "Was ist der Unterschied zwischen useradd und adduser?", a: "useradd ist ein systemnahes Low-Level-Werkzeug, das einen Benutzer mit den in /etc/login.defs definierten Standardwerten anlegt. adduser ist ein komfortabler, interaktiver Wrapper darum, der u.a. Passwort abfragt, das Home-Verzeichnis automatisch erstellt und Vorlagen aus /etc/skel/ kopiert." },
+  { cat: "Benutzerverwaltung", q: "Was bewirken die usermod-Optionen -aG, -g und -G, und worauf muss man dabei achten?", a: "-aG <gruppen>: fügt (append) den Benutzer zusätzlichen Gruppen hinzu, ohne bestehende zu entfernen. -g <gruppe>: ändert die primäre Gruppe. -G <gruppen> OHNE -a: überschreibt alle bisherigen sekundären Gruppen – dadurch können versehentlich Rechte wie sudo verloren gehen." },
+  { cat: "Benutzerverwaltung", q: "Was ist der Unterschied zwischen userdel und userdel -r?", a: "userdel entfernt den Benutzer nur aus den zentralen Benutzer-/Gruppendateien, das Home-Verzeichnis bleibt erhalten. userdel -r entfernt zusätzlich Home-Verzeichnis und Mail-Spool. Solange noch Prozesse unter der UID laufen, kann der Benutzer nicht gelöscht werden." },
+  { cat: "Benutzerverwaltung", q: "Was ist der Unterschied zwischen den eingeschränkten Shells rbash, nologin und /bin/false?", a: "rbash (restricted shell): eingeschränkte, aber nutzbare Shell (z.B. kein cd, keine Pfadangaben). nologin: Anmeldung wird mit Hinweistext verweigert – typisch für Dienstkonten wie www-data. /bin/false: die Anmeldung wird sofort beendet, meist ohne jede Meldung." },
+  { cat: "Benutzerverwaltung", q: "Wozu dienen /etc/skel/ und /etc/login.defs?", a: "/etc/skel/ (skeleton directory) enthält Vorlagen/Standarddateien, die beim Anlegen eines neuen Benutzers automatisch in dessen Home-Verzeichnis kopiert werden. /etc/login.defs legt zentrale Standardwerte für neue Benutzerkonten fest, z.B. UID-Bereiche oder Passwortregeln." },
+
+  // Prozessmanagement
+  { cat: "Prozessmanagement", q: "Was ist ein Prozess, und was bedeuten PID, PPID, UID/GID und CMD?", a: "Ein Prozess ist ein gerade ausgeführtes Programm, verwaltet vom Kernel. PID (Process ID): eindeutige Kennung. PPID (Parent Process ID): Kennung des Elternprozesses. UID/GID: Benutzer/Gruppe, unter der der Prozess läuft. CMD: der ausgeführte Befehl." },
+  { cat: "Prozessmanagement", q: "Was ist der Unterschied zwischen fork() und exec()?", a: "fork() erzeugt einen neuen Prozess als Kopie des aufrufenden Prozesses. exec() startet dabei keinen neuen Prozess, sondern lädt ein anderes Programm in den bereits erzeugten (bestehenden) Prozess." },
+  { cat: "Prozessmanagement", q: "Was bedeuten die Prozesszustände R, S, D, T und Z?", a: "R (Running): läuft oder ist bereit. S (Sleeping): wartet auf ein Ereignis. D (Uninterruptible Sleep): wartet im Kernel, meist auf I/O. T (Stopped): angehalten (z.B. durch Ctrl+Z). Z (Zombie): bereits beendet, aber noch als Prozesseintrag sichtbar." },
+  { cat: "Prozessmanagement", q: "Was zeigt ps aux an, und was bedeuten die Optionen a, u und x?", a: "ps aux zeigt alle Prozesse mit ausführlichen Infos (Benutzer, CPU-/Speicherverbrauch). a: Prozesse aller Benutzer mit Terminal. u: benutzerorientiertes Format mit Zusatzinfos. x: auch Prozesse ohne kontrollierendes Terminal (z.B. Daemonen)." },
+  { cat: "Prozessmanagement", q: "Was ist der Unterschied zwischen top und htop?", a: "top zeigt Prozesse und Systeminfos (Load Average, CPU-/Speicherauslastung) live in Echtzeit an, mit Tastenkürzeln wie P (nach CPU sortieren) oder k (Prozess beenden). htop ist eine interaktivere, farbige Alternative mit Scrollen, Baumansicht, Suche/Filter und Bedienung über Funktionstasten." },
+  { cat: "Prozessmanagement", q: "Was ist der Unterschied zwischen pgrep und pidof, und warum ist pgrep besser als ps aux | grep?", a: "pgrep sucht Prozesse nach Namen/Muster (auch im vollen Startbefehl mit -f). pidof sucht gezielt nach der PID eines Programmnamens. Bei ps aux | grep <name> erscheint der Suchbefehl grep selbst oft in der Trefferliste – pgrep vermeidet dieses Problem und ist zuverlässiger." },
+  { cat: "Prozessmanagement", q: "Was bewirken die Signale SIGTERM, SIGKILL, SIGHUP, SIGSTOP und SIGCONT?", a: "SIGTERM (15): Prozess geordnet/freundlich beenden. SIGKILL (9): Prozess sofort beenden (kann nicht abgefangen werden). SIGHUP (1): Terminal getrennt / bei Diensten oft 'neu laden'. SIGSTOP (19): Prozess anhalten. SIGCONT (18): Prozess fortsetzen." },
+  { cat: "Prozessmanagement", q: "Was ist der Unterschied zwischen einem Job und einer Jobnummer im Vergleich zur PID?", a: "Ein Job ist ein von der aktuellen Shell verwalteter Prozess (Vorder-/Hintergrund). Die Jobnummer wird von der Shell vergeben und gilt nur in der aktuellen Sitzung (genutzt von jobs, fg, bg). Die PID ist die systemweite Prozess-ID, mit der z.B. kill arbeitet." },
+  { cat: "Prozessmanagement", q: "Wie startet man einen Prozess im Hintergrund, und wie holt man ihn zurück in den Vordergrund?", a: "<befehl> & startet ihn direkt im Hintergrund. Ctrl+Z hält einen laufenden Vordergrundprozess an. bg setzt einen angehaltenen Prozess im Hintergrund fort, fg holt ihn (bzw. mit fg %<jobnummer> einen bestimmten Job) zurück in den Vordergrund." },
+  { cat: "Prozessmanagement", q: "Was ist der Unterschied zwischen nohup und disown?", a: "nohup startet einen NEUEN Befehl so, dass er beim Logout/Schließen des Terminals (SIGHUP) weiterläuft (Ausgabe landet standardmäßig in nohup.out). disown koppelt einen bereits laufenden Job im Nachhinein von der Shell ab, damit er beim Beenden der Shell kein SIGHUP erhält." },
+  { cat: "Prozessmanagement", q: "Was ist der Nice-Wert eines Prozesses, und wie ändert man ihn?", a: "Der Nice-Wert (Bereich -20 bis +19, Standard 0) beeinflusst die Scheduler-Priorität: niedrigere Werte = höhere Priorität, höhere Werte = niedrigere Priorität ('netter' gegenüber anderen Prozessen). nice -n <wert> <programm> startet einen Prozess mit bestimmtem Nice-Wert, renice <wert> -p <PID> ändert ihn nachträglich. Negative Werte erfordern Root-Rechte." },
+  { cat: "Prozessmanagement", q: "Wozu dienen screen und tmux?", a: "Beide ermöglichen persistente Terminalsitzungen, die auch nach Verbindungsabbruch oder Logout erhalten bleiben – Prozesse laufen im Hintergrund weiter und Sitzungen lassen sich später wieder verbinden (attach). tmux ist die modernere Alternative mit Fenstern, teilbaren Panes und besserer Anpassbarkeit." },
+
+  // Shell Scripting
+  { cat: "Shell Scripting", q: "Was ist die Shebang-Zeile, und woher kommt der Name?", a: "#!/bin/bash als erste Zeile eines Skripts legt fest, welcher Interpreter (welche Shell) das Skript ausführen soll. Der Name 'Shebang' leitet sich von der gesprochenen Bezeichnung der Zeichen # (hash/sharp) und ! (bang) ab: 'hash bang' → 'shebang'." },
+  { cat: "Shell Scripting", q: "Wie macht man ein Shell-Skript ausführbar, und warum braucht es ./ beim Aufruf?", a: "chmod +x script.sh setzt das Ausführungsrecht. ./script.sh ist nötig, weil Linux ausführbare Programme standardmäßig nur in Verzeichnissen sucht, die im Suchpfad $PATH stehen – das aktuelle Verzeichnis gehört normalerweise nicht dazu." },
+  { cat: "Shell Scripting", q: "Wie werden Variablen in Bash gesetzt und ausgelesen, und was ist bei der Typisierung anders als in Java?", a: "Zuweisung ohne Leerzeichen um das Gleichheitszeichen, z.B. name=\"Max\", Zugriff über $name. Bash hat keine feste Typisierung: Werte werden zunächst als Text behandelt, der Typ ergibt sich erst aus dem Verwendungskontext (anders als z.B. bei Java mit int/String)." },
+  { cat: "Shell Scripting", q: "Wie liest man Benutzereingaben in Bash ein?", a: "Mit read wird eine Eingabe in eine Variable gespeichert, z.B. read name. Mit read -p \"Text: \" name lässt sich eine Eingabeaufforderung direkt kombinieren, ohne separate echo-Zeile." },
+  { cat: "Shell Scripting", q: "Wie ist eine if/elif/else-Bedingung in Bash aufgebaut?", a: "if [ BEDINGUNG ]; then BEFEHL elif [ BEDINGUNG2 ]; then BEFEHL else BEFEHL fi. [ … ] ist eine Kurzschreibweise für den Befehl test, vor und nach den Klammern müssen Leerzeichen stehen, Variablen sollten in Anführungszeichen gesetzt werden." },
+  { cat: "Shell Scripting", q: "Welche Vergleichsoperatoren gibt es für Zahlen und welche für Zeichenketten in Bash?", a: "Zahlen: -eq (gleich), -ne (ungleich), -lt (kleiner), -le (kleiner/gleich), -gt (größer), -ge (größer/gleich). Zeichenketten: = (gleich), != (ungleich), -z (leer), -n (nicht leer)." },
+  { cat: "Shell Scripting", q: "Wie ist eine case-Anweisung aufgebaut, und wann ist sie sinnvoll?", a: "case WERT in MUSTER1) BEFEHL ;; MUSTER2) BEFEHL ;; *) BEFEHL ;; esac. Sinnvoll als übersichtliche Alternative zu mehreren if/elif-Abfragen, besonders bei Auswahlmenüs oder festen Parameterwerten. * fängt den Standardfall ab, ;; beendet jeden Fall." },
+  { cat: "Shell Scripting", q: "Wie ist der Kopf einer for-Schleife und einer while-Schleife in Bash aufgebaut, und wann nutzt man welche?", a: "for VARIABLE in LISTE; do BEFEHL done – geeignet für feste Listen oder bekannte Anzahl Durchläufe. while [ BEDINGUNG ]; do BEFEHL done – geeignet, wenn die Anzahl der Durchläufe von einer Bedingung abhängt (Zähler, Statusprüfungen)." },
+  { cat: "Shell Scripting", q: "Was ist der Unterschied zwischen $(…) und $((…)) in Bash?", a: "$( … ) ist Command Substitution: führt einen Befehl aus und setzt dessen Ausgabe ein, z.B. datum=$(date). $(( … )) ist arithmetische Auswertung: berechnet einen mathematischen Ausdruck und setzt das Ergebnis ein, z.B. echo $((3 + 2)) gibt 5 aus." },
+  { cat: "Shell Scripting", q: "Was ist ein Exit-Code, und wie fragt man ihn ab?", a: "Jeder Befehl liefert nach Ausführung einen Exit-Code zurück: 0 bedeutet Erfolg, jeder andere Wert Fehler/Sonderfall (programmspezifisch). Mit echo $? direkt nach dem Befehl lässt sich der Exit-Code des zuletzt ausgeführten Befehls anzeigen – if wertet in Bash direkt den Exit-Code eines Befehls aus (0 = wahr)." },
+  { cat: "Shell Scripting", q: "Was ist der Unterschied zwischen exit und return in Skripten/Funktionen?", a: "exit beendet sofort das gesamte Skript und gibt optional einen Exit-Code zurück (exit ohne Zahl übernimmt den Code des zuletzt ausgeführten Befehls). return beendet dagegen nur eine Funktion – das Skript läuft danach weiter." },
+  { cat: "Shell Scripting", q: "Welche Standard-Ein-/Ausgabekanäle gibt es, und wie leitet man sie um?", a: "0 = stdin (Standardeingabe), 1 = stdout (Standardausgabe), 2 = stderr (Fehlerausgabe). Umleitungen: > leitet stdout in eine Datei, 2> leitet stderr um, > /dev/null bzw. 2> /dev/null verwirft die jeweilige Ausgabe komplett ('digitaler Papierkorb')." },
+  { cat: "Shell Scripting", q: "Welche Skriptparameter gibt es ($0, $1, $@, $#), und was macht shift?", a: "$0: Skriptname. $1, $2, …: übergebene Argumente einzeln. $@: alle Argumente zusammen. $#: Anzahl der übergebenen Argumente. shift verschiebt alle Positionsparameter um eine Stelle nach links (aus $2 wird $1 usw.), der bisherige $1 entfällt – nützlich, wenn der erste Parameter schon verarbeitet wurde." },
+  { cat: "Shell Scripting", q: "Wie definiert man eine Funktion in Bash, und wie gibt sie einen Wert zurück?", a: "meine_funktion() { BEFEHLE } definiert eine Funktion, aufgerufen einfach über ihren Namen. Anders als in vielen Sprachen wird ein Wert nicht mit return, sondern über die Standardausgabe (echo) zurückgegeben, z.B. summe=$(addiere 5 6) übernimmt die Ausgabe der Funktion addiere." },
+
+  // LAMP & Docker
+  { cat: "LAMP & Docker", q: "Wofür steht LAMP, und warum spricht man von einem 'Stack'?", a: "LAMP = Linux + Apache + MySQL/MariaDB + PHP. Man spricht von einem Stack, weil die Komponenten wie ein Schichtmodell aufeinander aufbauen (Linux unten, PHP oben) – vergleichbar mit dem TCP/IP-Schichtenmodell." },
+  { cat: "LAMP & Docker", q: "Welche Rolle spielen Apache, MariaDB und PHP im LAMP-Stack?", a: "Apache: Webserver, nimmt Anfragen aus dem Internet entgegen und liefert Inhalte an den Browser zurück. MariaDB/MySQL: Datenbank für Inhalte, Einstellungen und Benutzer. PHP: serverseitige Skriptsprache, erzeugt dynamische Inhalte und verbindet Apache mit der Datenbank." },
+  { cat: "LAMP & Docker", q: "Wo liegt der Apache-Webroot, und was sind sites-available/sites-enabled?", a: "Der Webroot (Standardverzeichnis für ausgelieferte Dateien) liegt unter /var/www/html/. Konfigurationsdateien liegen unter /etc/apache2/: sites-available/ enthält Konfigurationen für virtuelle Hosts (vHosts), sites-enabled/ die tatsächlich aktivierten davon." },
+  { cat: "LAMP & Docker", q: "Was ist der Unterschied zwischen systemctl restart und systemctl reload bei Apache?", a: "restart wird bei tieferen Änderungen benötigt (z.B. neue Module, andere PHP-Version) – der Dienst wird komplett neu gestartet. reload reicht aus, wenn nur Konfigurationsdateien angepasst wurden (z.B. ein Virtual Host geändert) und ist schonender, da laufende Verbindungen weniger gestört werden." },
+  { cat: "LAMP & Docker", q: "Was ist Docker, und wie unterscheidet es sich grundlegend von einer virtuellen Maschine?", a: "Docker ist eine Plattform zur Containerisierung: Anwendungen laufen isoliert in Containern zusammen mit allem, was sie brauchen (Code, Bibliotheken, Konfiguration). Im Unterschied zur VM (eigenes vollständiges Betriebssystem, langsamer Start, hoher Ressourcenverbrauch) nutzt ein Container den Kernel des Hosts, startet in Sekunden(bruchteilen) und benötigt deutlich weniger Ressourcen." },
+  { cat: "LAMP & Docker", q: "Was sind Namespaces und Cgroups bei Docker?", a: "Namespaces sorgen für Isolation: jeder Container sieht nur seine eigenen Prozesse, sein eigenes Dateisystem und seine eigene Netzwerkumgebung. Cgroups (Control Groups) begrenzen und überwachen Ressourcen (z.B. CPU, RAM), damit ein Container das Host-System nicht überlasten kann." },
+  { cat: "LAMP & Docker", q: "Was ist der Unterschied zwischen einem Docker Image, einem Container und einem Dockerfile?", a: "Ein Image ist die Vorlage/der Bauplan für einen Container (unveränderlich). Ein Container ist eine laufende Instanz eines Images. Ein Dockerfile ist die Bauanleitung, aus der ein Image gebaut wird (docker build)." },
+  { cat: "LAMP & Docker", q: "Warum sind Docker-Volumes wichtig, und was ist der Unterschied zu einem Bind Mount?", a: "Container sind flüchtig – ihr interner Zustand geht beim Beenden/Neustarten verloren, deshalb gehören dauerhafte Daten in Volumes (von Docker verwaltet, z.B. unter /var/lib/docker) oder Bind Mounts (verbinden direkt einen Host-Ordner mit dem Container, z.B. -v ./daten:/var/www/html)." },
+  { cat: "LAMP & Docker", q: "Wie werden Container von außen erreichbar gemacht, und wie kommunizieren mehrere Container miteinander?", a: "Über Portweiterleitung mit -p Host-Port:Container-Port, z.B. docker run -d -p 80:80 wordpress. Für die Kommunikation zwischen Containern wird ein Docker-Netzwerk benötigt (docker network create); verbundene Container sprechen sich dann über ihren Container-/Servicenamen an statt über localhost." },
+  { cat: "LAMP & Docker", q: "Was ist der Unterschied zwischen docker run und Docker Compose?", a: "docker run startet einen einzelnen Container direkt über die Kommandozeile – gut für schnelle Tests. Docker Compose nutzt eine YAML-Konfigurationsdatei, um mehrere zusammengehörige Container gemeinsam zu starten und ihre Abhängigkeiten/Startreihenfolge zu beschreiben (docker compose up) – geeignet für komplexere Anwendungen wie einen kompletten LAMP-Stack." },
+
+  // Kali & Passwortsicherheit
+  { cat: "Kali & Passwortsicherheit", q: "Was ist Kali Linux, und wofür wird es eingesetzt?", a: "Eine auf Debian basierende Spezial-Distribution für IT-Sicherheit und Penetrationstests, mit vielen Sicherheits- und Analysewerkzeugen. Einsatzgebiete: Sicherheitsüberprüfungen, Schwachstellenanalyse, Schulung/Ausbildung und digitale Forensik – kein Alltags-Linux, und der Einsatz an fremden Systemen ist nur mit ausdrücklicher Genehmigung erlaubt (sonst strafbar)." },
+  { cat: "Kali & Passwortsicherheit", q: "Warum ist Kali Linux heute nicht mehr standardmäßig als Root eingeloggt?", a: "Früher lief Kali komplett als Root, was aber ein hohes Sicherheitsrisiko war (jeder Fehler wirkt systemweit, Schadsoftware hätte volle Kontrolle) und schlechte Gewohnheiten förderte. Heute gilt der moderne Sicherheitsansatz: Standardnutzer + gezielte, temporäre Rechteerhöhung bei Bedarf." },
+  { cat: "Kali & Passwortsicherheit", q: "Nenne 5 bekannte Kali-Linux-Werkzeuge und wofür sie jeweils genutzt werden.", a: "Nmap: Netzwerk-Scanner (erreichbare Hosts, offene Ports). Wireshark: Analyse von Netzwerkverkehr (Packet Capture). Metasploit Framework: Schwachstellenanalyse und -bewertung. Hydra: Brute-Force-Tool zur Überprüfung der Passwortstärke von Anmeldediensten. John the Ripper: Analyse von Passwort-Hashes." },
+  { cat: "Kali & Passwortsicherheit", q: "Wie werden Passwörter technisch gespeichert und geprüft?", a: "Passwörter werden nicht im Klartext gespeichert, sondern als Hashwert (Einweg-Funktion – aus dem Hash lässt sich das Passwort nicht zurückrechnen). Beim Login wird das eingegebene Passwort gehasht und mit dem gespeicherten Hash verglichen." },
+  { cat: "Kali & Passwortsicherheit", q: "Warum ist die Passwortlänge wichtiger als reine Zeichenvielfalt?", a: "Die Anzahl möglicher Passwörter wächst exponentiell mit der Länge (Zeichenanzahl^Länge) – z.B. bei 62 Zeichen: 4-stellig ca. 14,7 Mio. Kombinationen, 8-stellig ca. 218 Billionen. Sonderzeichen allein machen ein kurzes Passwort nicht sicher; entscheidend bleibt vor allem die Anzahl der Zeichen." },
+  { cat: "Kali & Passwortsicherheit", q: "Was ist der Unterschied zwischen 2FA und MFA?", a: "2FA (Zwei-Faktor-Authentifizierung): Anmeldung mit genau zwei unterschiedlichen Faktoren, z.B. Wissen (Passwort) + Besitz (Smartphone/Authenticator-App). MFA (Multi-Faktor-Authentifizierung) ist die Erweiterung: Nutzung von zwei ODER MEHR Faktoren, ggf. auch Biometrie (Fingerabdruck/Gesicht)." },
+  { cat: "Kali & Passwortsicherheit", q: "Wie funktioniert ein TOTP-Code (Time-based One-Time Password)?", a: "Beim Einrichten wird ein gemeinsames Geheimnis zwischen Server und Authenticator-App ausgetauscht (oft per QR-Code). Aus diesem Geheimnis und der aktuellen Uhrzeit (in festen Zeitfenstern, meist 30 Sekunden) berechnen beide Seiten unabhängig denselben kurzen Zahlencode – TOTP funktioniert daher auch offline, basiert technisch auf HMAC mit einer Hashfunktion." },
+  { cat: "Kali & Passwortsicherheit", q: "Welche zwei Methoden helfen, sich lange, sichere Passwörter zu merken?", a: "Passphrase-Methode: mehrere ungewöhnliche Wörter kombinieren, z.B. 'Sudo!Pinguin?Terminal42'. Satz-Methode: einen Satz ausdenken und daraus Anfangsbuchstaben + Zeichen/Zahl bilden, z.B. aus 'Ich trinke 10 Kaffee am Tag!' wird 'It10KaT!'." },
+  { cat: "Kali & Passwortsicherheit", q: "Warum ist Passwort-Wiederverwendung besonders bei E-Mail-Konten riskant?", a: "Ein E-Mail-Konto ermöglicht das Zurücksetzen der Passwörter vieler anderer Dienste – wird es kompromittiert, sind potenziell alle daran hängenden Konten gefährdet. Grundsatz: ein Dienst – ein Passwort, ergänzt durch einen Passwortmanager und aktivierte 2FA/MFA." },
+
+  // Praxis: Git & Netzwerk
+  { cat: "Praxis: Git & Netzwerk", q: "Was ist Git, und was ist der Unterschied zu GitHub?", a: "Git ist eine Software zur Versionsverwaltung: sie speichert Zustände von Dateien als Commits (Schnappschüsse) und läuft zunächst vollständig lokal. GitHub (bzw. GitLab) ist dagegen eine Online-Plattform, auf der Git-Projekte (Repositories) gespeichert und geteilt werden können – Git lässt sich auch völlig ohne GitHub nutzen." },
+  { cat: "Praxis: Git & Netzwerk", q: "Was sind die drei Bereiche im Git-Workflow, und welche Befehle gehören dazu?", a: "Arbeitsverzeichnis (eigene Dateien) → git add verschiebt Änderungen in die Staging Area (Zwischenbereich, vorgemerkte Änderungen) → git commit -m \"…\" speichert sie dauerhaft im Repository als Commit. git status zeigt dazwischen den aktuellen Zustand." },
+  { cat: "Praxis: Git & Netzwerk", q: "Was ist ein Branch in Git, und wie legt man einen neuen an?", a: "Ein Branch (Zweig) ist eine parallele Arbeitslinie, mit der sich neue Funktionen entwickeln lassen, ohne den funktionierenden Hauptstand (meist main) zu verändern. git switch -c neue-funktion legt einen neuen Branch an und wechselt direkt hinein; git merge führt ihn später wieder in main zusammen." },
+  { cat: "Praxis: Git & Netzwerk", q: "Was ist ein Remote in Git, und was machen git push und git pull?", a: "Ein Remote ist eine Kopie des Repositorys auf einem Server (z.B. GitHub), üblicherweise origin genannt. git push lädt lokale Commits zum Remote hoch, git pull holt neue Commits vom Remote herunter." },
+  { cat: "Praxis: Git & Netzwerk", q: "Wozu dient eine .gitignore-Datei?", a: "Sie legt fest, welche Dateien/Ordner Git NICHT überwachen und nicht mit hochladen soll (z.B. temporäre Dateien, virtuelle Umgebungen, Passwörter). Jede Zeile ist ein Muster, das passende Dateien/Ordner von der Versionsverwaltung ausschließt." },
+  { cat: "Praxis: Git & Netzwerk", q: "Nenne die fünf gefährlichsten destruktiven Linux-Befehle und was sie jeweils zerstören.", a: "rm -rf / (--no-preserve-root): löscht rekursiv das ganze System. dd if=... of=/dev/sda: überschreibt Bootloader/ganze Platte mit Nullen. mkfs.ext4 auf falscher Platte: zerstört das Dateisystem. Fork-Bomb (:(){ :|:& };:): füllt Prozesstabelle/RAM und macht das System unbedienbar. chmod -R 777 /: zerstört Sicherheit/Dienste, da z.B. sshd bei zu offenen Rechten den Start verweigert." },
+  { cat: "Praxis: Git & Netzwerk", q: "Warum wird systemd-networkd heute gegenüber dem alten ifupdown/interfaces bevorzugt?", a: "ifupdown und /etc/network/interfaces gelten als veraltet und sind z.B. in Debian 13 nicht mehr standardmäßig installiert. systemd-networkd ist der moderne, empfohlene Weg zur Netzwerkkonfiguration unter aktuellen Debian-Versionen und arbeitet enger mit dem restlichen systemd-Ökosystem zusammen." },
+];
+
+const DECK_PM = [
+  // Grundlagen & Ziele
+  { cat: "Grundlagen & Ziele", q: "Wie definiert die DIN 69901 ein Projekt?", a: "Ein Vorhaben, das im Wesentlichen durch die Einmaligkeit der Bedingungen in ihrer Gesamtheit gekennzeichnet ist, z.B. Zielvorgabe sowie zeitliche, finanzielle und personelle Begrenzungen, Abgrenzung gegenüber anderen Vorhaben und eine projektspezifische Organisation." },
+  { cat: "Grundlagen & Ziele", q: "Was ist das 'magische Dreieck' des Projektmanagements?", a: "Die drei Zielgrößen Zeit/Termin, Kosten/Budget und Ergebnis/Qualität, die in Konkurrenz zueinander stehen: z.B. erhöht das Halten des Termins durch zusätzliche Mitarbeiter die Kosten, oder zusätzliche Tests zur Qualitätssicherung verschieben Termin und erhöhen die Kosten." },
+  { cat: "Grundlagen & Ziele", q: "Wofür steht die SMART-Formel bei der Zielformulierung?", a: "Spezifisch (konkret formuliert), Messbar (überprüfbar), Attraktiv/Akzeptiert, Realistisch (erreichbar) und Terminiert (mit festem Zeitrahmen)." },
+  { cat: "Grundlagen & Ziele", q: "Wer sind Stakeholder, und welche Aufgabe hat der Projektleiter ihnen gegenüber?", a: "Stakeholder sind Personen oder Organisationen, deren Interessen durch das Projekt betroffen sind (z.B. Kunde, Team, Nutzer). Der Projektmanager muss ihre Ansprüche an das Projekt so weit wie möglich erfüllen, wobei wichtigere Stakeholder mehr Aufmerksamkeit/Maßnahmen erhalten." },
+
+  // Rollen & Organisation
+  { cat: "Rollen & Organisation", q: "Was sind die typischen Projektrollen Auftraggeber, Auftragnehmer, Controlling, Lenkungskreis und Projektleiter?", a: "Auftraggeber: gibt das Projekt in Auftrag, Vertragspartner, nimmt es ab. Auftragnehmer: Vertragspartner, trägt das Risiko, beauftragt die Projektleitung. Controlling: überwacht Fortschritt/Kosten (Soll-Ist-Vergleiche). Lenkungskreis: wichtige Stakeholder/Fachexperten, berät/entscheidet/genehmigt neutral übergeordnet. Projektleiter: steuert das Projekt und verantwortet die Zielerreichung." },
+  { cat: "Rollen & Organisation", q: "Welche vier Kompetenzen werden von einer Projektleitung erwartet?", a: "Fachkompetenz (fachliche Kenntnisse), Sozialkompetenz (Kommunikations-/Konfliktlösungs-/Teamfähigkeit), Führungskompetenz (Durchsetzungsvermögen, Mitarbeiter motivieren können) und Selbstkompetenz (Entscheidungsstärke, Zielstrebigkeit, Durchhaltevermögen)." },
+  { cat: "Rollen & Organisation", q: "Was unterscheidet reine Projektorganisation, Matrix-Projektorganisation und Stabsprojektorganisation?", a: "Reine Projektorganisation: Mitarbeiter werden komplett aus ihren Abteilungen gelöst und dem Projektleiter auch disziplinarisch unterstellt. Matrix-Projektorganisation: Mitarbeiter sind sowohl dem Linienvorgesetzten als auch dem Projektleiter unterstellt. Stabsprojektorganisation: Das Projekt ist an eine Stabsstelle delegiert, der Projektleiter hat nur koordinierende Funktion, kein Weisungsrecht." },
+  { cat: "Rollen & Organisation", q: "Nenne je 2 Vorteile interner Projektbearbeitung und externer Vergabe an Projektberater.", a: "Intern: gefestigte Vertraulichkeit, Kenntnis der Unternehmenskultur, leichtere Steuerung interner Ressourcen. Extern: bei seltenen Projekten günstiger als eigenen PM zu beschäftigen, neue Perspektiven, flexibler Zugang zu Ressourcen." },
+
+  // Phasen & Dokumente
+  { cat: "Phasen & Dokumente", q: "Welche 5 Phasen umfasst das klassische Phasenmodell nach DIN 69901-2?", a: "Initiierung (Projektvorbereitung, Ideenfindung, Grobplanung), Definition (Anforderungen klären, SMARTe Ziele, Meilensteine festlegen), Planung (Detailplanung: PSP, Vorgangsliste, Termine, Budget), Steuerung (Status/Termine/Budget verfolgen, Änderungen managen) und Abschluss (Übergabe, Test, Abnahme, Lessons Learned)." },
+  { cat: "Phasen & Dokumente", q: "Was ist der Unterschied zwischen Lastenheft und Pflichtenheft?", a: "Das Lastenheft beschreibt aus Sicht des Auftraggebers, WAS gemacht werden soll (Anforderungen, Ist-Aufnahme, Sollkonzept). Das Pflichtenheft beschreibt aus Sicht des Auftragnehmers, WIE die Anforderungen technisch umgesetzt werden sollen." },
+  { cat: "Phasen & Dokumente", q: "Was ist ein Projektstrukturplan (PSP), und was ist die kleinste Einheit darin?", a: "Der PSP (englisch: work breakdown structure) gliedert ein Projekt hierarchisch in überschaubare Elemente – enthält noch keine zeitlichen Abhängigkeiten, bildet aber die Basis für Termin- und Kostenpläne. Die kleinste Einheit ist das Arbeitspaket: hat genau einen Verantwortlichen, einen abgeschlossenen Inhalt, endet mit einem Ergebnis und wird durch einen PSP-Code eindeutig identifiziert." },
+  { cat: "Phasen & Dokumente", q: "Nach welchen drei Gesichtspunkten kann ein Projektstrukturplan gegliedert werden?", a: "Funktionsorientiert (nach Tätigkeitsarten, z.B. Erdarbeiten, Maurerarbeiten), objektorientiert (nach Bauteilen/Objekten, z.B. Zufahrt, Gebäude) und phasenorientiert (nach Projektphasen, z.B. Entwurf, Bau, Inbetriebnahme)." },
+  { cat: "Phasen & Dokumente", q: "Was ist der Unterschied zwischen einem Arbeitspaket und einem Vorgang?", a: "Ein Arbeitspaket ist eine übergeordnete Einheit aus dem PSP (Was soll getan werden?). Ein Vorgang ist eine detailliertere Unterteilung davon mit definiertem Start-/Endzeitpunkt und benötigten Ressourcen – Teil der Termin- und Ablaufplanung (Was kann mit welcher Dauer in welcher Reihenfolge erledigt werden?)." },
+  { cat: "Phasen & Dokumente", q: "Was sind Meilensteine, und wozu dienen sie?", a: "Wichtige Kontrollpunkte/Zwischenziele, an denen Projektphasen enden und geplante Zwischenergebnisse dokumentiert und kontrolliert werden. Bei Abweichungen zum Plan kann frühzeitig reagiert werden; Meilensteine sind auch Entscheidungspunkte für das weitere Vorgehen." },
+
+  // Planung
+  { cat: "Planung", q: "Was ist der Unterschied zwischen Bottom-up- und Top-down-Zeitschätzung?", a: "Bottom-up: die Dauer der einzelnen Vorgänge wird geschätzt und zum Gesamtaufwand zusammengefasst. Top-down: zunächst wird der Aufwand für das Gesamtprojekt geschätzt und dieser dann auf die einzelnen Tätigkeiten verteilt." },
+  { cat: "Planung", q: "Was ist die Methode Schätzklausur?", a: "Eine Methode zur Ermittlung des Aufwands (Zeit oder Kosten) im Projekt, bei der mehrere Experten ihre Schätzwerte diskutieren und sich im Rahmen der Klausur auf einen gemeinsamen Wert einigen (alternativ: Mittelwert nach Entfernen der höchsten/niedrigsten Schätzung)." },
+  { cat: "Planung", q: "Was zeigt ein Gantt-Diagramm, und wie erkennt man darin einen Zeitpuffer?", a: "Ein Balkendiagramm, das alle geplanten Vorgänge auf einer Zeitachse zeigt: Gesamtdauer, geplante Anfangs-/Endzeitpunkte und welche Vorgänge parallel bzw. hintereinander ablaufen. Ein Vorgang mit Zeitpuffer ist einer, der verschoben werden könnte, ohne den Gesamtendtermin zu gefährden." },
+  { cat: "Planung", q: "Was zeigt die Netzplantechnik, und was bedeuten FAZ, FEZ, SAZ, SEZ?", a: "Der Netzplan ist ein Instrument zur Zeit-/Terminplanung, das zeigt, welche Vorgänge zeitkritisch sind. FAZ: frühester Anfangszeitpunkt, FEZ: frühester Endzeitpunkt (= FAZ + Dauer), SAZ: spätester Anfangszeitpunkt, SEZ: spätester Endzeitpunkt (= SAZ minus Dauer)." },
+  { cat: "Planung", q: "Wie berechnet man Gesamtpuffer (GP) und freien Puffer (FP) im Netzplan, und was ist der kritische Pfad?", a: "GP = SEZ minus FEZ (wie weit sich ein Vorgang verschieben lässt, ohne den Projektendtermin zu gefährden). FP = FAZ des Nachfolgers minus FEZ (Verschiebung ohne den Nachfolger zu beeinflussen). Der kritische Pfad besteht aus den Vorgängen ohne Zeitpuffer – jede Verzögerung dort verschiebt direkt den Projektendtermin." },
+  { cat: "Planung", q: "Was zeigt ein Kapazitätsplan, und welche Maßnahmen gibt es bei Kapazitätsüberlastung?", a: "Er dokumentiert die Verfügbarkeit und Beanspruchung von Ressourcen (Mitarbeiter, Arbeitsmittel). Bei Überlastung: Arbeitspakete verschieben (nur wenn nicht auf dem kritischen Pfad), Mitarbeiter von anderen Aufgaben entlasten, weitere Mitarbeiter einsetzen (erhöht Budget/Einarbeitungszeit), oder – im agilen PM – den Leistungsumfang verkleinern." },
+  { cat: "Planung", q: "Wie berechnet man die benötigte Mitarbeiterzahl aus Aufwand und Terminrahmen?", a: "Benötigte Mitarbeiter = Gesamtaufwand (Tage) geteilt durch Terminrahmen (Tage). Beispiel: 405 Tage Aufwand bei 90 Tagen Laufzeit ergibt 405/90 = 4,5 Mitarbeiter. Zusätzlich sind Einarbeitungszeiten, Urlaub und Krankheitsvertretung zu berücksichtigen." },
+
+  // Steuerung & Risiko
+  { cat: "Steuerung & Risiko", q: "Was ist eine Meilensteintrendanalyse, und wie interpretiert man fallende bzw. steigende Trends?", a: "Ein vorwärts gerichtetes Controllinginstrument: zu jedem Berichtszeitpunkt wird geschätzt, wann ein Meilenstein erreicht wird, und diese Einschätzungen werden über die Zeit zu einem Trend verbunden. Fallender Trend: vorzeitiges Erreichen (evtl. zu viele Kapazitäten gebunden). Steigender Trend: Verzögerung, Termin kann evtl. nicht gehalten werden." },
+  { cat: "Steuerung & Risiko", q: "Nenne die 5 Kategorien von Projektrisiken.", a: "Marktrisiken (z.B. Nachfrageänderungen, neue Wettbewerber), Personalrisiken (z.B. Krankheit, Fluktuation), technische Risiken (z.B. Anlagenausfall, Qualitätsmängel), finanzielle Risiken (z.B. nicht kalkulierte Ausgaben) und Risiken aus politischen Rahmenbedingungen bzw. der natürlichen Umwelt." },
+  { cat: "Steuerung & Risiko", q: "Was besagt das ALARP-Prinzip, und welche 5 Risikostrategien gibt es?", a: "ALARP (As Low As Reasonably Possible): Risiken auf ein wirtschaftlich/technisch vertretbares Minimum reduzieren. Strategien: Vermeidung (Auftrag nicht annehmen), Verlagerung (Versicherung, Change Requests an Auftraggeber), Verminderung (z.B. Überstunden), Begrenzung (z.B. Währungsabsicherung) und Akzeptanz (keine Vorsorge)." },
+  { cat: "Steuerung & Risiko", q: "Wie wird im Risiko-Portfolio entschieden, welche Risiken vermieden bzw. akzeptiert werden?", a: "Risiken werden nach Eintrittswahrscheinlichkeit und Schadensausmaß (Folgen) bewertet. Hohe Wahrscheinlichkeit + schwere Folgen: unbedingt vermeiden. Niedrige Wahrscheinlichkeit + leichte Folgen: kann akzeptiert werden. Bei mittleren Kombinationen wird geprüft, ob Vermeidungskosten den erwarteten Nutzen übersteigen (z.B. Versicherung sinnvoll oder Pufferzeiten einplanen)." },
+  { cat: "Steuerung & Risiko", q: "Nenne die 8 Qualitätsmerkmale von Software nach ISO 25010.", a: "Zuverlässigkeit, Funktionalität, Wartbarkeit, Sicherheit, Effizienz/Performance, Benutzbarkeit, Kompatibilität und Portabilität." },
+
+  // Agiles PM
+  { cat: "Agiles PM & Scrum", q: "Was ist der Unterschied zwischen dem Wasserfall-Modell und dem V-Modell?", a: "Beim Wasserfall-Modell laufen die Projektphasen streng nacheinander ab, ohne Rücksprung – erst am Ende wird umfangreich getestet. Das V-Modell stellt jeder Entwicklungsphase eine passende Testphase gegenüber (z.B. Komponententest zur Komponentenentwurf, Systemtest zum Systementwurf) und integriert so die Qualitätssicherung von Anfang an." },
+  { cat: "Agiles PM & Scrum", q: "Was ist das Spiralmodell?", a: "Ein iteratives Vorgehensmodell, bei dem die Projektphasen mehrfach durchlaufen werden und das Ergebnis schrittweise erweitert/verbessert wird. Durch frühe funktionsfähige Prototypen kann der Anwender früh prüfen, ob das Projekt seine Anforderungen erfüllt – das Fehlentwicklungsrisiko sinkt, weil bei jedem Durchlauf gegengesteuert werden kann." },
+  { cat: "Agiles PM & Scrum", q: "Was ist der zentrale Unterschied zwischen klassischem und agilem Projektmanagement bei Zeitproblemen?", a: "Klassisch: bei Problemen wird meist der Termin verschoben (Nachtragsbudget, Change Request). Agil: der Termin bleibt fix, stattdessen wird der Leistungsumfang verringert – es erfolgen Teilauslieferungen mit geringerer Funktionalität, wichtige Funktionen werden priorisiert und früh in einfacher Form ausgeliefert." },
+  { cat: "Agiles PM & Scrum", q: "Welche drei Rollen gibt es in Scrum, und was macht jede davon?", a: "Scrum Master: sorgt für den korrekten Scrum-Prozess, ist Ansprechpartner für Prozessfragen. Product Owner: kennt die Kundenanforderungen, verantwortet das Product Backlog und die Priorisierung ('Was'). Development Team: setzt die Anforderungen selbstorganisiert um und trägt Mitverantwortung für den Gesamtprozess." },
+  { cat: "Agiles PM & Scrum", q: "Welche fünf Ereignisse (Events) gibt es in Scrum?", a: "Sprint Planning (Auswahl der Anforderungen für den Sprint), Sprint (Arbeitsphase, meist 2-4 Wochen), Daily Scrum (tägliches Stand-up-Meeting, max. 15 Min.), Sprint Review (Stakeholder sehen den Arbeitsstand) und Sprint Retrospective (Team reflektiert Zusammenarbeit/Prozess, nicht das Produkt)." },
+  { cat: "Agiles PM & Scrum", q: "Was ist der Unterschied zwischen Product Backlog, Sprint Backlog und Increment?", a: "Product Backlog: alle für das Produkt insgesamt umzusetzenden Anforderungen, nie vollständig abgeschlossen. Sprint Backlog: die für den aktuellen Sprint ausgewählten Anforderungen (wie eine To-do-Liste, oft als Kanban Board dargestellt). Increment: das Teilprodukt, das durch einen Sprint tatsächlich entsteht." },
+  { cat: "Agiles PM & Scrum", q: "Worauf liegt der Fokus bei Kanban?", a: "Auf der visuellen Darstellung des Arbeitsfortschritts (Kanban Board) und der Begrenzung von 'Work in Progress' (WIP) – wie viele Aufgaben gleichzeitig in Bearbeitung sein dürfen, um Engpässe sichtbar zu machen und den Fluss der Arbeit zu verbessern." },
+
+  // Teamführung & Kommunikation
+  { cat: "Teamführung & Kommunikation", q: "Was ist der Unterschied zwischen intrinsischer und extrinsischer Motivation?", a: "Intrinsische Motivation kommt von innen heraus und wirkt dauerhaft (die Arbeit selbst macht Freude). Extrinsische Motivation wirkt von außen (z.B. finanzielle Anreize), eher kurzfristig, wobei das Anspruchsniveau mit der Zeit steigt." },
+  { cat: "Teamführung & Kommunikation", q: "Welche drei grundlegenden Führungsstile gibt es?", a: "Autoritärer Führungsstil: die Führungskraft entscheidet allein und kontrolliert genau, Mitarbeiter führen nur aus. Kooperativer Führungsstil: Mitarbeiter werden einbezogen und erhalten eigenen Handlungsspielraum. Laissez-faire-Stil: die Führungskraft kümmert sich kaum, Mitarbeiter entscheiden mit voller Freiheit selbst." },
+  { cat: "Teamführung & Kommunikation", q: "Was besagt das Kommunikationsquadrat von Schulz von Thun (die 4 Seiten einer Nachricht)?", a: "Sachebene (Daten/Fakten), Selbstkundgabe (was der Sender über sich preisgibt), Beziehungsebene (Verhältnis zwischen Sender und Empfänger) und Appellebene (welchen Einfluss der Sender nehmen will). Sender und Empfänger können jeweils unterschiedliches Gewicht auf die vier Seiten legen, was zu Kommunikationsstörungen führen kann." },
+  { cat: "Teamführung & Kommunikation", q: "Was ist der Unterschied zwischen Du-Botschaften und Ich-Botschaften?", a: "Du-Botschaften (z.B. Befehle, Vorwürfe, Unterstellungen) wirken oft wie Angriffe auf der Beziehungsebene und provozieren Widerstand, was zu einer Negativ-Spirale führen kann. Ich-Botschaften benennen stattdessen die Tatsache (Sachaussage ohne Wertung), das eigene Gefühl, die Beziehungsebene und die Erwartung – das reduziert Konflikte." },
+  { cat: "Teamführung & Kommunikation", q: "Welche 5 Phasen der Teamentwicklung beschreibt Bruce Tuckman?", a: "Einstiegs-/Kennenlernphase (Unsicherheit, Zurückhaltung), Konflikt-/Streitphase (Machtkämpfe, geringe Leistung), Regelungs-/Übereinkommensphase (Normen werden gefunden, Rollen geklärt), Arbeits-/Leistungsphase (Team arbeitet erfolgreich zusammen) und Auflösungsphase (Abschluss, Feedback, Lessons Learned)." },
+];
+
+const DECK_MARKETING = [
+  // Marktanalyse
+  { cat: "Marktanalyse", q: "Was umfasst Marketing laut Definition, und welches Ziel verfolgt es?", a: "Marketing umfasst alle betrieblichen Tätigkeiten der Planung, Koordination, Kontrolle und Information, die auf aktuelle und potenzielle Märkte ausgerichtet sind. Ziel ist es, Kundenbedürfnisse zu befriedigen – ausgehend von der Marktanalyse werden Strategien entwickelt und über das Marketing-Mix umgesetzt." },
+  { cat: "Marktanalyse", q: "Was ist der Unterschied zwischen Marktkapazität, Marktpotenzial, Marktvolumen und Marktanteil?", a: "Marktkapazität: maximal denkbare Absatzmenge, ohne Kaufkraft zu berücksichtigen. Marktpotenzial: berücksichtigt die tatsächliche Kaufkraft. Marktvolumen: tatsächliche Absatzmenge/Umsätze aller Hersteller am Markt. Marktanteil: Anteil des eigenen Unternehmensumsatzes am Marktvolumen." },
+  { cat: "Marktanalyse", q: "Was ist der Unterschied zwischen Primärer und Sekundärer Marktforschung?", a: "Primäre Marktforschung (Field-Research): Erstgewinnung eigener Informationen, z.B. Befragungen, Panelerhebungen, Markttests. Sekundäre Marktforschung (Desk-Research): Auswertung bereits vorhandener Daten (innerbetrieblich z.B. Umsatzstatistiken, außerbetrieblich z.B. IHK-Berichte) – weniger aufwendig, aber Daten können veraltet sein." },
+  { cat: "Marktanalyse", q: "Was ist der Unterschied zwischen Markterkundung und Marktforschung?", a: "Markterkundung: unsystematisches, gelegentliches Sammeln von Informationen (z.B. Kundengespräche, Messebesuche). Marktforschung: systematische, wissenschaftliche Untersuchung des Markts, entweder als Marktanalyse (Zeitpunkt-Untersuchung, z.B. einmalige Befragung) oder Marktbeobachtung (Zeitraum-Untersuchung, z.B. Panel)." },
+  { cat: "Marktanalyse", q: "Was ist der Unterschied zwischen Lastenheft und Pflichtenheft im Marketing-Kontext?", a: "Das Lastenheft wird vom Kunden vorgegeben und beschreibt als Anforderungskatalog, WAS zu tun ist (Grundlage für Angebotseinholung). Das Pflichtenheft stellt die Lösung des Anbieters dar und beschreibt, WIE und WOMIT die im Lastenheft gewünschten Funktionen umgesetzt werden sollen." },
+
+  // Portfolio & SWOT
+  { cat: "Portfolio & SWOT", q: "Wofür wird die Produktlebenszyklus-Analyse genutzt, und welche 5 Phasen durchläuft ein Produkt?", a: "Sie leitet aus Umsatz-, Deckungsbeitrags- und Gewinnprognose die passenden Strategien für ein Produkt ab. Phasen: Einführung, Wachstum, Reife, Sättigung, Degeneration – mit jeweils typischen Käufertypen, Marktstrukturen und Strategien." },
+  { cat: "Portfolio & SWOT", q: "Was ist der Unterschied zwischen Produktlebenszyklus-Analyse und Portfolio-Analyse?", a: "Die Produktlebenszyklus-Analyse untersucht die Entwicklung eines EINZELNEN Produkts über die Zeit. Die Portfolio-Analyse bewertet dagegen die aktuelle und zukünftige Situation ALLER Artikel im Sortiment und leitet für jeden Artikel eine eigene Strategie ab." },
+  { cat: "Portfolio & SWOT", q: "Wie berechnet man den relativen Marktanteil und das Marktwachstum?", a: "Relativer Marktanteil (%) = Unternehmensumsatz geteilt durch Umsatz des stärksten Mitbewerbers, mal 100. Marktwachstum (%) = Veränderung des Marktumsatzes geteilt durch Marktumsatz im Vorjahr, mal 100. Beide bilden zusammen die Achsen der BCG-Portfolio-Matrix." },
+  { cat: "Portfolio & SWOT", q: "Was kennzeichnet die vier Felder der BCG-Portfolio-Matrix (Question Marks, Stars, Cash Cows, Poor Dogs)?", a: "Question Marks: hohes Marktwachstum, geringer Marktanteil → Offensivstrategie (selektiv fördern). Stars: hohes Wachstum, hoher Marktanteil → Wachstumsstrategie (intensiv entwickeln). Cash Cows: geringes Wachstum, hoher Marktanteil → Abschöpfungsstrategie (im Markt halten). Poor Dogs: geringes Wachstum, geringer Marktanteil → Desinvestitionsstrategie (eliminieren)." },
+  { cat: "Portfolio & SWOT", q: "Wofür steht SWOT, und was ist der Unterschied zwischen Unternehmens-Analyse und Umwelt-Analyse?", a: "SWOT = Strengths, Weaknesses, Opportunities, Threats. Unternehmens-Analyse (SW, 'Blick nach innen'): eigene Stärken/Schwächen im Vergleich zu Wettbewerbern (Polaritätsprofil). Umwelt-Analyse (OT, 'Blick nach außen'): Chancen/Risiken aus der sich verändernden Umwelt (Makro- und Mikroumwelt)." },
+  { cat: "Portfolio & SWOT", q: "Was untersucht die PESTEL-Analyse (Makroumwelt)?", a: "Political (z.B. neue Regierung), economical (z.B. Konjunktur, Zinsen), social (z.B. Altersstruktur), technological (z.B. KI, 3D-Druck), ecological (z.B. Klimaziele) und legal (z.B. Produzentenhaftung, AGG) – Faktoren, die kaum vom Unternehmen beeinflussbar sind." },
+  { cat: "Portfolio & SWOT", q: "Was sind SO-, ST-, WO- und WT-Strategien in der SWOT-Matrix?", a: "SO-Strategien: eigene Stärken nutzen, um Chancen zu ergreifen. ST-Strategien: eigene Stärken nutzen, um Gefahren abzuwehren. WO-Strategien: eigene Schwächen beseitigen, um Chancen zu nutzen. WT-Strategien: eigene Schwächen beseitigen, um Gefahren abzuwenden." },
+
+  // Produktpolitik
+  { cat: "Produktpolitik", q: "Welche vier Qualitätsarten eines Produkts gibt es?", a: "Gebrauchstechnische Qualität (Haltbarkeit, Funktionalität), ästhetische Qualität (Farbe, Form, Design), ökologische Qualität (Recycling) und sozio-kulturelle Qualität (Image, Prestige)." },
+  { cat: "Produktpolitik", q: "Was ist der Unterschied zwischen Marktinnovation und Unternehmensinnovation, und was ist Produktdifferenzierung vs. Produktdiversifikation?", a: "Marktinnovation: ein Produkt, das es am Gesamtmarkt noch nicht gab. Unternehmensinnovation: ein für das Unternehmen neues Produkt, das am Markt aber schon existiert – als Produktdifferenzierung (neues Produkt in gleicher Produktgruppe) oder Produktdiversifikation (neue Produktgruppe)." },
+  { cat: "Produktpolitik", q: "Was ist der Unterschied zwischen Produktvariation und Produkteliminierung?", a: "Produktvariation: Veränderung eines bestehenden Produkts (physisch-funktionell, ästhetisch, Image, Name oder Zusatzleistungen), z.B. VW Golf zusätzlich als Cabrio. Produkteliminierung: ein Produkt wird komplett aus dem Programm genommen, z.B. der Golf wird nicht mehr hergestellt." },
+  { cat: "Produktpolitik", q: "Was ist der Unterschied zwischen Programmbreite und Programmtiefe (Sortimentstiefe)?", a: "Programmbreite: Anzahl der Produktgruppen (für jeweilige Zielgruppen), die nebeneinander bestehen (z.B. VW breit, Ferrari schmal). Sortimentstiefe: Anzahl der Modellvarianten innerhalb einer Produktgruppe. Erweiterung der Breite = Diversifikation, Erweiterung der Tiefe = Differenzierung." },
+  { cat: "Produktpolitik", q: "Was ist der Unterschied zwischen horizontaler und vertikaler Programmerweiterung?", a: "Horizontal (gleiche Wirtschaftsstufe): medial (sachlich zusammenhängend, z.B. VW baut jetzt auch Motorräder) oder lateral (sachlich getrennt, z.B. VW verkauft jetzt Sportkleidung). Vertikal (andere Wirtschaftsstufe): Vorstufe (z.B. VW stellt eigene Reifen her) oder Nachstufe (z.B. VW bietet eigene Leasinggesellschaft)." },
+  { cat: "Produktpolitik", q: "Was ist der Unterschied zwischen Kernsortiment und Randsortiment?", a: "Kernsortiment: Hauptbestandteil des Sortiments, wird vom Kunden erwartet und muss vollständig sein (kann auch Verlustprodukte enthalten). Randsortiment: ergänzt das Kernsortiment, wird nicht zwingend erwartet – Verlustprodukte hier können problemlos eliminiert werden." },
+  { cat: "Produktpolitik", q: "Welche fünf Markenarten gibt es und was ist jeweils ein Beispiel?", a: "Produktmarke/Einzelmarke: jedes Produkt hat einen eigenen Namen (z.B. Persil). Familienmarke: eine Produktgruppe trägt einen gemeinsamen Namen (z.B. Nivea). Firmenmarke: alle Produkte tragen den Firmennamen (z.B. Nestle). Handelsmarke: der Händler bestimmt den Namen (z.B. Elite). Herstellermarke: der Hersteller bestimmt den Namen (z.B. Coca Cola)." },
+  { cat: "Produktpolitik", q: "Nenne 5 Funktionen der Produktverpackung.", a: "Schutz (vor Witterung), Distribution (Stapel-/Transportfähigkeit), Identifizierung (Erkennungseffekt), Differenzierung (Unterscheidung von anderen Produkten) und Information (Nennung von Produktdaten) – daneben auch Selbstpräsentation, Verkaufsaufforderung, Image und Gebrauch." },
+  { cat: "Produktpolitik", q: "Welche drei Servicevarianten gibt es beim Hardware-Service?", a: "Bring-in-Service: der Kunde bringt das defekte Gerät zur Servicestelle. Desk-to-desk-Service: das defekte Gerät wird direkt am Arbeitsplatz durch ein funktionsfähiges ausgetauscht. Hotline-Service: technische Beratung per Telefon oder E-Mail." },
+
+  // Preispolitik
+  { cat: "Preispolitik", q: "Was ist der Unterschied zwischen langfristiger und kurzfristiger Preisuntergrenze?", a: "Langfristige Preisuntergrenze = gesamte Stückkosten – der Preis muss langfristig alle Kosten decken, sonst entsteht Verlust. Kurzfristige Preisuntergrenze = variable Stückkosten – kurzfristig kann der Preis aus Wettbewerbsgründen darauf gesenkt werden, wobei dann die fixen Kosten nicht gedeckt werden (Verlust in Höhe der Fixkosten)." },
+  { cat: "Preispolitik", q: "Was ist Total Cost of Ownership (TCO)?", a: "Ein Abrechnungsverfahren, das neben den Anschaffungskosten (Kauf, Lieferung, Installation) auch alle Kosten der späteren Nutzung erfasst (Energie, Wartung, Reparatur, Entsorgung) – hilft Kunden/Investoren, die tatsächlichen Gesamtkosten eines Investitionsguts abzuschätzen." },
+  { cat: "Preispolitik", q: "Was ist der Unterschied zwischen Hochpreis- und Niedrigpreisstrategie?", a: "Hochpreisstrategie (Premiumpolitik): Preis wird im Vergleich zur Konkurrenz hoch angesetzt, z.B. für Qualitätsführerschaft oder Markenstrategie. Niedrigpreisstrategie (Promotionspolitik): Preis wird niedriger angesetzt, z.B. um Kostenführerschaft anzustreben, Konkurrenz zu verdrängen oder preisorientierte Kunden anzusprechen." },
+  { cat: "Preispolitik", q: "Was unterscheidet Preisführer, Preisfolger und Preiskämpfer?", a: "Preisführer: hat den größten Marktanteil und verlangt den höchsten Preis. Preisfolger: passt seinen Preis laufend dem Preisführer an (meist etwas niedriger). Preiskämpfer: unterbietet Konkurrenten aktiv, um die Preisführerschaft zu erreichen (braucht dafür eine günstige Kostenstruktur)." },
+  { cat: "Preispolitik", q: "Was ist der Unterschied zwischen Abschöpfungsstrategie (Skimming) und Marktdurchdringungsstrategie (Penetration)?", a: "Abschöpfungsstrategie: hoher Anfangspreis, der später gesenkt wird – eignet sich für innovative Produkte, um die Entwicklungskosten je Käufergruppe maximal abzuschöpfen. Marktdurchdringungsstrategie: niedriger Einführungspreis, der später angehoben wird – dient dem Markteintritt bzw. der Abschreckung von Konkurrenten (Markteintrittsbarriere)." },
+  { cat: "Preispolitik", q: "Welche fünf Arten der Preisdifferenzierung gibt es?", a: "Räumlich (nach Absatzgebieten), zeitlich (nach Absatzzeiten), persönlich (nach Abnehmergruppen, z.B. Erwachsene/Kinder), verdeckt (nach Aufmachung) und mengenmäßig (nach Abnahmemenge) – jeweils dasselbe Produkt zu unterschiedlichen Preisen." },
+  { cat: "Preispolitik", q: "Was ist der Unterschied zwischen Bruttosystem und Nettosystem bei der Preisstellung?", a: "Bruttosystem: der Verkäufer kalkuliert intern Rabattaufschläge ein und gewährt diese dann als Rabattabschläge – der Kunde empfindet das als besonderen Vorteil, der Verkäufer bleibt flexibel. Nettosystem: von vornherein werden Staffelpreise als Festpreise je Abnahmemenge angeboten – der Kunde vertraut auf gerechte, knapp kalkulierte Preise." },
+  { cat: "Preispolitik", q: "Was ist der Unterschied zwischen Skonto und Bonus?", a: "Skonto: Nachlass für eine verkürzte Zahlungsfrist – bringt dem Kunden einen Preisvorteil und dem Verkäufer schnellere Liquidität. Bonus: eine Prämie für einen erreichten Mindestumsatz innerhalb eines Zeitraums." },
+
+  // Kommunikationspolitik
+  { cat: "Kommunikationspolitik", q: "Welche 5 Hauptbestandteile hat die Kommunikationspolitik?", a: "Werbung (Mediawerbung), Verkaufsförderung (Sales Promotion), Öffentlichkeitsarbeit (Public Relations), Direktwerbung und persönlicher Verkauf." },
+  { cat: "Kommunikationspolitik", q: "Was besagt die AIDA-Formel bei der Werbeplanung?", a: "Attention (Aufmerksamkeit auf das Produkt lenken), Interest (Interesse wecken), Desire (Wunsch nach Besitz erzeugen) und Action (die Kaufhandlung auslösen) – die vier Stufen, die Werbung beim Kunden idealerweise durchläuft." },
+  { cat: "Kommunikationspolitik", q: "Was besagt die KISS-Formel, und worauf achtet sie konkret?", a: "'Keep It Short and Simple' – der beste Weg, AIDA zu erreichen. Sie achtet auf Wahrheit (Vertrauensverlust vorbeugen), Klarheit (Verständlichkeit beim ersten Kontakt), Wirksamkeit (maximale Wirkung erzielen) und Wirtschaftlichkeit (kostengünstigste Umsetzung)." },
+  { cat: "Kommunikationspolitik", q: "Nenne 3 Vorteile von Online-Werbung gegenüber Printmedien und 2 Vorteile umgekehrt.", a: "Online: schneller verfügbar, räumlich/zeitlich unabhängig (24h weltweit), nachträglich anpassbar, oft kostengünstiger. Print/Offline: erreicht auch nicht internetaffine Kunden, funktioniert ohne Internetzugriff und wird von manchen als übersichtlicher/besser lesbar empfunden." },
+  { cat: "Kommunikationspolitik", q: "Wie berechnet man den Werbeerfolg in Prozent?", a: "Werbeerfolg (%) = Werbebedingter Umsatzzuwachs geteilt durch Werbekosten, mal 100 – setzt den durch Werbung erzielten Mehrumsatz ins Verhältnis zu den dafür aufgewendeten Kosten." },
+  { cat: "Kommunikationspolitik", q: "Was ist der Unterschied zwischen Werbung und Verkaufsförderung (Sales Promotion)?", a: "Werbung soll den Kunden zum Point of Sale (PoS) locken und zum Kauf allgemein anregen. Verkaufsförderung gibt dem Kunden dort durch besondere, kurzfristige und außergewöhnliche Anreize (z.B. Preisnachlass, Coupons, Proben) den letzten konkreten Anstoß zur Kaufhandlung." },
+  { cat: "Kommunikationspolitik", q: "Was ist der Unterschied zwischen Werbung und Öffentlichkeitsarbeit (Public Relations)?", a: "Werbung richtet sich konkret an bereits vorhandene oder mögliche Kunden und bewirbt Produkte. Öffentlichkeitsarbeit richtet sich dagegen an die gesamte Öffentlichkeit (auch Mitarbeiter) und bezieht sich ausschließlich auf das Unternehmen, nicht auf einzelne Produkte – Ziel ist u.a. der Aufbau einer Vertrauensbasis (Good Will)." },
+  { cat: "Kommunikationspolitik", q: "Was ist Direktwerbung, und was ist ihr zentraler Vorteil?", a: "Die zielgenaue, persönliche Ansprache eines einzelnen Zielkunden (z.B. per Brief oder E-Mail/Direct Mail). Vorteil: geringere Streuverluste (Personen, die die Werbung erreicht, aber nicht zur Zielgruppe gehören) und dadurch geringere Werbekosten im Vergleich zu klassischer Media-Werbung." },
+
+  // Distributionspolitik & Recht
+  { cat: "Distribution & Recht", q: "Was ist der Unterschied zwischen physischer und akquisitorischer Distribution?", a: "Physische Distribution (Logistik): Lagersysteme und Transportmittel. Akquisitorische Distribution (Verkauf): Absatzwege sowie Absatzmittler und Absatzhelfer – also alle Entscheidungen vom Hersteller bis zum Verwender." },
+  { cat: "Distribution & Recht", q: "Was ist der Unterschied zwischen direktem und indirektem Absatz?", a: "Direkter Absatz: vom Hersteller unmittelbar an den Verwender, z.B. E-Commerce (B2B/B2C). Indirekter Absatz: über Zwischenstufen durch selbständige Absatzmittler, z.B. den Einzelhandel." },
+  { cat: "Distribution & Recht", q: "Was regelt das Gesetz gegen unlauteren Wettbewerb (UWG)?", a: "Es soll fairen Wettbewerb zwischen Unternehmen sicherstellen und Kunden vor irreführenden Angaben schützen. Verboten sind u.a. Ausnutzung geschäftlicher Unerfahrenheit, unzulässige Werbemittel (Lockvogelangebote, Schneeballsystem), Anschwärzen von Konkurrenten und irreführende Werbung (z.B. falsche Angaben zu Preis, Ware oder Unternehmen)." },
+  { cat: "Distribution & Recht", q: "Wie lange sind Marke, Geschmacksmuster, Gebrauchsmuster und Patent jeweils (mindestens) geschützt?", a: "Marke: 10 Jahre, gegen Gebühr beliebig oft um 10 Jahre verlängerbar. Geschmacksmuster: 5 Jahre, verlängerbar bis max. 20 Jahre. Gebrauchsmuster ('kleines Patent'): 3 Jahre, verlängerbar bis max. 10 Jahre. Patent: 20 Jahre, NICHT verlängerbar." },
+  { cat: "Distribution & Recht", q: "Welches Widerrufsrecht hat ein Verbraucher bei Kredit-, Haustür- und Fernabsatzgeschäften?", a: "In allen drei Fällen hat der Verbraucher innerhalb von 2 Wochen das Recht, ohne Begründung zu widerrufen und die Ware auf Kosten und Gefahr des Verkäufers zurückzuschicken. Bei irreführender/unwahrer Werbung besteht sogar ein Rücktrittsrecht innerhalb von 6 Monaten." },
+  { cat: "Distribution & Recht", q: "Was ist der Unterschied zwischen einem Konzern und einer Fusion?", a: "Beim Konzern bleibt die rechtliche Selbständigkeit (Firmenname) jedes Unternehmens erhalten, obwohl ein Unternehmen die Mehrheit übernimmt (z.B. VW kauft Porsche – beide Marken bleiben). Bei einer Fusion geht die rechtliche Selbständigkeit mindestens eines Unternehmens verloren – die Unternehmen verschmelzen zu einem (z.B. EDEKA kauft Tengelmann, die Marke verschwindet)." },
+  { cat: "Distribution & Recht", q: "Was ist der Unterschied zwischen einer Kooperation und einem Unternehmenszusammenschluss?", a: "Bei einer Kooperation (z.B. Joint Venture, Arbeitsgemeinschaft, Kartell) bleibt die wirtschaftliche Selbständigkeit im Wesentlichen erhalten, mit gewissen vertraglichen Einschränkungen. Bei einem Unternehmenszusammenschluss (Konzern/Fusion) verliert das übernommene Unternehmen dagegen seine wirtschaftliche Selbständigkeit (Entscheidungsfreiheit) vollständig." },
+  { cat: "Distribution & Recht", q: "Was sind die Hauptaufgaben des Bundeskartellamts?", a: "Fusionskontrolle (prüft, ob durch eine Fusion eine zu starke Marktkonzentration entsteht) und Missbrauchsaufsicht (prüft, ob zwischen Unternehmen unerlaubtes abgestimmtes Verhalten vorliegt). Bei Fehlverhalten kann es Verhalten untersagen, Verträge für unwirksam erklären oder Geldstrafen verhängen – überstimmt werden kann es nur durch den Bundeswirtschaftsminister (Ministerklausel) oder das Europäische Kartellamt." },
+];
+
+
+const DECK_HEX_EXPLANATION = [
+  { cat: "Grundlagen", q: "Was ist das Hexadezimalsystem, und warum wird es in der IT häufig verwendet?", a: "Ein Zahlensystem zur Basis 16 mit den Ziffern 0-9 und A-F (für die Werte 10-15). Es wird oft genutzt, weil sich Binärzahlen damit sehr kompakt darstellen lassen (4 Bit = genau 1 Hexziffer) – z.B. bei MAC-Adressen, IPv6-Adressen, Farbcodes oder Speicheradressen." },
+  { cat: "Grundlagen", q: "Welche Dezimalwerte haben die Hexadezimalziffern A bis F?", a: "A=10, B=11, C=12, D=13, E=14, F=15. Die Ziffern 0-9 haben wie gewohnt ihren normalen Wert." },
+  { cat: "Grundlagen", q: "Wie ist der Stellenwert (die Positionswertigkeit) einer Hexadezimalzahl aufgebaut?", a: "Jede Stelle steht für eine Potenz von 16, von rechts nach links steigend: 16⁰=1, 16¹=16, 16²=256, 16³=4096, … – genau wie im Dezimalsystem die Stellen für Zehnerpotenzen stehen." },
+  { cat: "Grundlagen", q: "Wie rechnet man eine Hexadezimalzahl in eine Dezimalzahl um?", a: "Jede Ziffer mit ihrem Stellenwert (16^Position) multiplizieren und die Ergebnisse addieren. Beispiel: 2F = 2×16¹ + 15×16⁰ = 32 + 15 = 47." },
+  { cat: "Grundlagen", q: "Wie rechnet man eine Dezimalzahl in eine Hexadezimalzahl um?", a: "Fortgesetzte Division durch 16: Die Zahl durch 16 teilen, den Rest notieren, den Quotienten erneut durch 16 teilen usw., bis 0 erreicht ist. Die Reste von unten nach oben gelesen ergeben die Hex-Ziffern. Beispiel: 200 : 16 = 12 Rest 8; 12 : 16 = 0 Rest 12 (C) → von unten gelesen: C8." },
+  { cat: "Grundlagen", q: "Welchen Zusammenhang gibt es zwischen Hexadezimal- und Binärzahlen?", a: "Jede Hexadezimalziffer entspricht genau 4 Bit (ein 'Nibble'), da 16 = 2⁴. Eine Binärzahl lässt sich deshalb von rechts in 4er-Gruppen aufteilen, wobei jede Gruppe direkt einer Hexziffer entspricht (z.B. 1010 = A)." },
+  { cat: "Grundlagen", q: "Welche Schreibweisen kennzeichnen Hexadezimalzahlen üblicherweise?", a: "Häufig das Präfix 0x (z.B. 0x2F, vor allem in Programmiersprachen), ein nachgestelltes h (z.B. 2Fh), oder – wie in der Netzwerktechnik bei MAC-/IPv6-Adressen – gar kein Präfix, da der Kontext eindeutig ist." },
+  { cat: "Grundlagen", q: "Nenne 3 typische Einsatzbereiche von Hexadezimalzahlen in der IT.", a: "MAC-Adressen (12 Hexziffern), IPv6-Adressen (Hexblöcke), Farbcodes in HTML/CSS (#RRGGBB), sowie Speicheradressen und Fehler-/Statuscodes." },
+];
+
+function generateHexPracticeCards(n) {
+  const cards = [];
+  for (let i = 0; i < n; i++) {
+    const digits = Math.random() < 0.5 ? 2 : 3;
+    const min = Math.pow(16, digits - 1);
+    const max = Math.pow(16, digits) - 1;
+    const val = Math.floor(Math.random() * (max - min + 1)) + min;
+    const hex = val.toString(16).toUpperCase();
+    const digitArr = hex.split("");
+    const terms = digitArr.map((d, idx) => {
+      const power = digitArr.length - 1 - idx;
+      const digitVal = parseInt(d, 16);
+      return `${d}(${digitVal})×16^${power}`;
+    });
+    cards.push({
+      cat: "Übung: Hex → Dezimal",
+      q: `Wandle die Hexadezimalzahl ${hex} in eine Dezimalzahl um.`,
+      a: `${hex} = ${terms.join(" + ")} = ${val}`,
+    });
+  }
+  return cards;
+}
+
+let DECK_HEX = [...DECK_HEX_EXPLANATION, ...generateHexPracticeCards(20)];
+
+function regenerateHexPracticeCards() {
+  const fresh = generateHexPracticeCards(20);
+  DECK_HEX.splice(DECK_HEX_EXPLANATION.length, DECK_HEX.length - DECK_HEX_EXPLANATION.length, ...fresh);
+}
+
+const TABS = [
+  { id: "nwt", label: "Netzwerktechnik", deck: DECK_NWT },
+  { id: "prog", label: "Programmieren", deck: DECK_PROG },
+  { id: "linux", label: "Linux", deck: DECK_LINUX },
+  { id: "pm", label: "Projektmanagement", deck: DECK_PM },
+  { id: "marketing", label: "Marketing", deck: DECK_MARKETING },
+  { id: "hex", label: "Hexadezimal", deck: DECK_HEX },
+];
+TABS.forEach(t => { t.categories = [...new Set(t.deck.map(c => c.cat))]; });
+
+// per-tab state
+const state = {};
+TABS.forEach(t => {
+  state[t.id] = {
+    activeCats: new Set(t.categories),
+    order: t.deck.map((_, i) => i),
+    pos: 0,
+    flipped: false,
+    known: {},
+    quiz: null,
+  };
+});
+
+let activeTab = TABS[0].id;
+let showMenu = false;
+let touchStartX = null;
+let mode = "cards";
+
+function currentTab() { return TABS.find(t => t.id === activeTab); }
+function currentState() { return state[activeTab]; }
+
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildQuizQuestions(tab, activeCats) {
+  if (tab.id === "hex") regenerateHexPracticeCards();
+  const filtered = tab.deck.filter(c => activeCats.has(c.cat));
+  const pool = filtered.length >= 4 ? filtered : tab.deck;
+  const questions = filtered.map(card => {
+    if (tab.id === "hex" && card.cat === "Übung: Hex → Dezimal") {
+      const hexMatch = card.q.match(/Hexadezimalzahl (\w+) in/);
+      const valMatch = card.a.match(/=\s*(\d+)\s*$/);
+      const correctVal = valMatch ? parseInt(valMatch[1], 10) : 0;
+      const wrongVals = new Set();
+      let attempts = 0;
+      while (wrongVals.size < 3 && attempts < 50) {
+        attempts++;
+        const offset = Math.floor(Math.random() * 40) + 1;
+        const sign = Math.random() < 0.5 ? -1 : 1;
+        const candidate = correctVal + sign * offset;
+        if (candidate >= 0 && candidate !== correctVal) wrongVals.add(candidate);
+      }
+      const optionVals = shuffleArray([correctVal, ...wrongVals]);
+      return { cat: card.cat, q: card.q, options: optionVals.map(String), correctIndex: optionVals.indexOf(correctVal) };
+    }
+    const correct = card.a;
+    const candidates = [...new Set(pool.map(c => c.a).filter(a => a !== correct))];
+    const wrongs = shuffleArray(candidates).slice(0, 3);
+    const options = shuffleArray([correct, ...wrongs]);
+    return { cat: card.cat, q: card.q, options, correctIndex: options.indexOf(correct) };
+  });
+  return shuffleArray(questions);
+}
+
+function buildQuiz(tabId) {
+  const tab = TABS.find(t => t.id === tabId);
+  const st = state[tabId];
+  const questions = buildQuizQuestions(tab, st.activeCats);
+  st.quiz = { questions, pos: 0, selected: null, answered: false, score: 0, skipped: 0, wrongList: [], skippedList: [], finished: questions.length === 0 };
+}
+
+function getCategoryStats(quiz) {
+  const catTotals = {};
+  quiz.questions.forEach(q => { catTotals[q.cat] = (catTotals[q.cat] || 0) + 1; });
+  const wrongByCategory = {};
+  quiz.wrongList.forEach(w => { wrongByCategory[w.cat] = (wrongByCategory[w.cat] || 0) + 1; });
+  const skippedByCategory = {};
+  (quiz.skippedList || []).forEach(s => { skippedByCategory[s.cat] = (skippedByCategory[s.cat] || 0) + 1; });
+  const stats = Object.keys(catTotals).map(cat => {
+    const total = catTotals[cat];
+    const wrong = wrongByCategory[cat] || 0;
+    const skippedC = skippedByCategory[cat] || 0;
+    const correct = total - wrong - skippedC;
+    return { cat, total, correct, wrong, skipped: skippedC };
+  });
+  stats.sort((a, b) => a.correct / a.total - b.correct / b.total);
+  return stats;
+}
+
+function filteredIndices(tab, st) {
+  return tab.deck.map((c, i) => ({ ...c, i })).filter(c => st.activeCats.has(c.cat)).map(c => c.i);
+}
+
+function renderTabs() {
+  const row = document.getElementById("tabRow");
+  row.innerHTML = "";
+  TABS.forEach(t => {
+    const btn = document.createElement("button");
+    btn.className = "tab-btn" + (t.id === activeTab ? " active" : "");
+    btn.textContent = t.label;
+    btn.onclick = () => {
+      activeTab = t.id;
+      if (mode === "quiz" && !state[t.id].quiz) buildQuiz(t.id);
+      renderAll();
+    };
+    row.appendChild(btn);
+  });
+}
+
+function renderCatPanel() {
+  const panel = document.getElementById("catPanel");
+  panel.className = "cat-panel" + (showMenu ? " open" : "");
+  panel.innerHTML = "";
+  const tab = currentTab();
+  const st = currentState();
+  tab.categories.forEach(cat => {
+    const active = st.activeCats.has(cat);
+    const count = tab.deck.filter(c => c.cat === cat).length;
+    const chip = document.createElement("button");
+    chip.className = "chip" + (active ? " active" : "");
+    chip.textContent = `${cat} (${count})`;
+    chip.onclick = () => {
+      if (st.activeCats.has(cat)) st.activeCats.delete(cat);
+      else st.activeCats.add(cat);
+      if (st.activeCats.size === 0) st.activeCats.add(cat);
+      st.order = filteredIndices(tab, st);
+      st.pos = 0;
+      st.flipped = false;
+      if (mode === "quiz") buildQuiz(activeTab);
+      renderAll();
+    };
+    panel.appendChild(chip);
+  });
+}
+
+function renderCard() {
+  const tab = currentTab();
+  const st = currentState();
+  const total = st.order.length;
+  const emptyEl = document.getElementById("emptyState");
+  const cardArea = document.getElementById("cardArea");
+
+  if (total === 0) {
+    emptyEl.style.display = "block";
+    cardArea.style.display = "none";
+    return;
+  }
+  emptyEl.style.display = "none";
+  cardArea.style.display = "block";
+
+  const cardIdx = st.order[st.pos];
+  const card = tab.deck[cardIdx];
+
+  document.getElementById("progressFill").style.width = `${((st.pos + 1) / total) * 100}%`;
+  const knownCount = st.order.filter(i => st.known[i] === "known").length;
+  const unknownCount = st.order.filter(i => st.known[i] === "unknown").length;
+  let label = `Karte ${st.pos + 1} / ${total}`;
+  if (knownCount > 0 || unknownCount > 0) {
+    label += `  ·  ✓ ${knownCount} · ✗ ${unknownCount}`;
+  }
+  document.getElementById("progressLabel").textContent = label;
+
+  document.getElementById("catLabelFront").textContent = card.cat;
+  document.getElementById("qText").textContent = card.q;
+  document.getElementById("aText").textContent = card.a;
+
+  const flipInner = document.getElementById("flipInner");
+  flipInner.classList.toggle("flipped", st.flipped);
+
+  document.getElementById("btnPrev").disabled = st.pos === 0;
+  document.getElementById("btnNext").disabled = st.pos === total - 1;
+}
+
+function renderAll() {
+  renderTabs();
+  renderCatPanel();
+  document.getElementById("modeCardsBtn").classList.toggle("active-cards", mode === "cards");
+  document.getElementById("modeQuizBtn").classList.toggle("active-quiz", mode === "quiz");
+  if (mode === "cards") {
+    document.getElementById("cardArea").style.display = "block";
+    document.getElementById("quizArea").style.display = "none";
+    renderCard();
+  } else {
+    document.getElementById("cardArea").style.display = "none";
+    document.getElementById("emptyState").style.display = "none";
+    document.getElementById("quizArea").style.display = "block";
+    renderQuiz();
+  }
+}
+
+function renderQuiz() {
+  const st = currentState();
+  const quiz = st.quiz;
+  const progressLabel = document.getElementById("quizProgressLabel");
+  const progressFill = document.getElementById("quizProgressFill");
+  const qCard = document.getElementById("quizQuestionCard");
+  const optionsCol = document.getElementById("quizOptions");
+  const nextBtn = document.getElementById("quizNextBtn");
+  const resultBox = document.getElementById("quizResultBox");
+
+  if (!quiz || quiz.questions.length === 0) {
+    qCard.style.display = "none";
+    optionsCol.innerHTML = "";
+    nextBtn.style.display = "none";
+    document.getElementById("quizSkipBtn").style.display = "none";
+    resultBox.style.display = "none";
+    progressLabel.textContent = "";
+    progressFill.style.width = "0%";
+    document.getElementById("emptyState").style.display = "block";
+    document.getElementById("emptyState").textContent = "Keine Fragen in der Auswahl.";
+    return;
+  }
+  document.getElementById("emptyState").style.display = "none";
+
+  if (quiz.finished) {
+    qCard.style.display = "none";
+    optionsCol.innerHTML = "";
+    nextBtn.style.display = "none";
+    document.getElementById("quizSkipBtn").style.display = "none";
+    progressLabel.textContent = "";
+    progressFill.style.width = "100%";
+    resultBox.style.display = "flex";
+    document.getElementById("quizResultScore").textContent = `${quiz.score} / ${quiz.questions.length} richtig`;
+    const skippedEl = document.getElementById("quizResultSkipped");
+    if (quiz.skipped > 0) {
+      skippedEl.style.display = "block";
+      skippedEl.textContent = `${quiz.skipped} übersprungen`;
+    } else {
+      skippedEl.style.display = "none";
+    }
+    document.getElementById("quizResultPct").textContent = `${Math.round((quiz.score / quiz.questions.length) * 100)}%`;
+
+    const summaryBox = document.getElementById("quizSummaryBox");
+    summaryBox.innerHTML = "";
+    const catStats = getCategoryStats(quiz);
+    if (catStats.length >= 2) {
+      const title = document.createElement("div");
+      title.className = "wrong-list-title";
+      title.textContent = "Zusammenfassung nach Thema:";
+      summaryBox.appendChild(title);
+      catStats.forEach(s => {
+        const ratio = s.correct / s.total;
+        const row = document.createElement("div");
+        row.className = "summary-row";
+        row.innerHTML = `<div class="summary-cat-name"></div><div class="summary-bar-track"><div class="summary-bar-fill"></div></div><div class="summary-cat-count"></div>`;
+        row.children[0].textContent = s.cat;
+        const fill = row.querySelector(".summary-bar-fill");
+        fill.style.width = `${ratio * 100}%`;
+        fill.style.background = ratio < 0.5 ? "#E06666" : ratio < 0.8 ? "#F2A65A" : "#4FD1C5";
+        row.children[2].textContent = `${s.correct}/${s.total}`;
+        summaryBox.appendChild(row);
+      });
+      const weakest = catStats[0];
+      if (weakest.correct / weakest.total < 1) {
+        const focus = document.createElement("div");
+        focus.className = "summary-focus";
+        focus.textContent = "Fokussiere dich als nächstes auf: " + weakest.cat;
+        summaryBox.appendChild(focus);
+      }
+    }
+
+    const wrongListEl = document.getElementById("quizWrongList");
+    wrongListEl.innerHTML = "";
+    if (quiz.wrongList.length > 0) {
+      const title = document.createElement("div");
+      title.className = "wrong-list-title";
+      title.textContent = "Zum Nacharbeiten:";
+      wrongListEl.appendChild(title);
+      quiz.wrongList.forEach(w => {
+        const item = document.createElement("div");
+        item.className = "wrong-item";
+        item.innerHTML = `<div class="wrong-q"></div><div class="wrong-your"></div><div class="wrong-correct"></div>`;
+        item.children[0].textContent = w.q;
+        item.children[1].textContent = "Deine Antwort: " + w.yourAnswer;
+        item.children[2].textContent = "Richtig: " + w.correct;
+        wrongListEl.appendChild(item);
+      });
+    }
+    return;
+  }
+
+  resultBox.style.display = "none";
+  qCard.style.display = "flex";
+  const q = quiz.questions[quiz.pos];
+  progressFill.style.width = `${((quiz.pos + 1) / quiz.questions.length) * 100}%`;
+  progressLabel.textContent = `Frage ${quiz.pos + 1} / ${quiz.questions.length}   ·   Punkte: ${quiz.score}`;
+  document.getElementById("quizCatLabel").textContent = q.cat;
+  document.getElementById("quizQText").textContent = q.q;
+
+  optionsCol.innerHTML = "";
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement("button");
+    let variant = "";
+    if (quiz.answered) {
+      if (i === q.correctIndex) variant = " correct";
+      else if (i === quiz.selected) variant = " wrong";
+      else variant = " dim";
+    }
+    btn.className = "option-btn" + variant;
+    btn.textContent = opt;
+    btn.disabled = quiz.answered;
+    btn.onclick = () => selectAnswer(i);
+    optionsCol.appendChild(btn);
+  });
+
+  nextBtn.style.display = quiz.answered ? "block" : "none";
+  nextBtn.textContent = quiz.pos + 1 >= quiz.questions.length ? "Ergebnis anzeigen" : "Weiter";
+  document.getElementById("quizSkipBtn").style.display = quiz.answered ? "none" : "block";
+}
+
+function selectAnswer(optionIndex) {
+  const st = currentState();
+  const quiz = st.quiz;
+  if (!quiz || quiz.answered) return;
+  const q = quiz.questions[quiz.pos];
+  const isCorrect = optionIndex === q.correctIndex;
+  quiz.selected = optionIndex;
+  quiz.answered = true;
+  if (isCorrect) {
+    quiz.score++;
+  } else {
+    quiz.wrongList.push({ cat: q.cat, q: q.q, yourAnswer: q.options[optionIndex], correct: q.options[q.correctIndex] });
+  }
+  renderQuiz();
+}
+
+function nextQuestion() {
+  const st = currentState();
+  const quiz = st.quiz;
+  if (!quiz) return;
+  quiz.pos++;
+  if (quiz.pos >= quiz.questions.length) {
+    quiz.finished = true;
+  } else {
+    quiz.selected = null;
+    quiz.answered = false;
+  }
+  renderQuiz();
+}
+
+function skipQuestion() {
+  const st = currentState();
+  const quiz = st.quiz;
+  if (!quiz) return;
+  const q = quiz.questions[quiz.pos];
+  quiz.skipped = (quiz.skipped || 0) + 1;
+  quiz.skippedList = quiz.skippedList || [];
+  quiz.skippedList.push({ cat: q.cat, q: q.q });
+  quiz.pos++;
+  if (quiz.pos >= quiz.questions.length) {
+    quiz.finished = true;
+  } else {
+    quiz.selected = null;
+    quiz.answered = false;
+  }
+  renderQuiz();
+}
+
+document.getElementById("quizNextBtn").onclick = nextQuestion;
+document.getElementById("quizSkipBtn").onclick = skipQuestion;
+document.getElementById("quizRestartBtn").onclick = () => {
+  buildQuiz(activeTab);
+  renderQuiz();
+};
+document.getElementById("modeCardsBtn").onclick = () => {
+  mode = "cards";
+  renderAll();
+};
+document.getElementById("modeQuizBtn").onclick = () => {
+  mode = "quiz";
+  if (!state[activeTab].quiz) buildQuiz(activeTab);
+  renderAll();
+};
+
+function next() {
+  const st = currentState();
+  if (st.pos < st.order.length - 1) { st.pos++; st.flipped = false; renderCard(); }
+}
+function prev() {
+  const st = currentState();
+  if (st.pos > 0) { st.pos--; st.flipped = false; renderCard(); }
+}
+function shuffle() {
+  const st = currentState();
+  const isHex = activeTab === "hex";
+  if (isHex) { regenerateHexPracticeCards(); st.known = {}; }
+  const arr = st.order.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  st.order = arr;
+  st.pos = 0;
+  st.flipped = false;
+  renderCard();
+}
+function mark(kind) {
+  const st = currentState();
+  const cardIdx = st.order[st.pos];
+  st.known[cardIdx] = kind;
+  renderCard();
+  setTimeout(next, 150);
+}
+
+document.getElementById("menuBtn").onclick = () => {
+  showMenu = !showMenu;
+  document.getElementById("menuBtn").textContent = "Themen " + (showMenu ? "▲" : "▼");
+  renderCatPanel();
+};
+document.getElementById("flipCard").onclick = () => {
+  const st = currentState();
+  st.flipped = !st.flipped;
+  renderCard();
+};
+document.getElementById("btnPrev").onclick = prev;
+document.getElementById("btnNext").onclick = next;
+document.getElementById("btnShuffle").onclick = shuffle;
+document.getElementById("btnReset").onclick = () => {
+  const st = currentState();
+  if (activeTab === "hex") regenerateHexPracticeCards();
+  st.pos = 0;
+  st.flipped = false;
+  st.known = {};
+  renderCard();
+};
+document.getElementById("btnUnknown").onclick = () => mark("unknown");
+document.getElementById("btnKnown").onclick = () => mark("known");
+
+const stage = document.querySelector(".stage");
+stage.addEventListener("touchstart", e => { touchStartX = e.touches[0].clientX; });
+stage.addEventListener("touchend", e => {
+  if (touchStartX == null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (dx < -50) next();
+  if (dx > 50) prev();
+  touchStartX = null;
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowRight") next();
+  if (e.key === "ArrowLeft") prev();
+  if (e.key === " ") { e.preventDefault(); const st = currentState(); st.flipped = !st.flipped; renderCard(); }
+});
+
+renderAll();
+</script>
+</body>
+</html>

@@ -62,6 +62,36 @@
   .nav-btn:disabled { opacity: .3; cursor: default; }
   .empty { color: #7C8B99; margin-top: 60px; text-align: center; }
   svg.icon { width: 16px; height: 16px; }
+  .mode-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .mode-btn { flex: 1; border: 1px solid #26313C; border-radius: 10px; padding: 9px 0; font-size: 13px; cursor: pointer; font-family: inherit; background: #151F29; color: #B7C2CC; transition: all .15s ease; }
+  .mode-btn.active-cards { background: #4FD1C5; color: #0F1720; border-color: #4FD1C5; font-weight: 700; }
+  .mode-btn.active-quiz { background: #F2A65A; color: #0F1720; border-color: #F2A65A; font-weight: 700; }
+  .quiz-card { width: 100%; background: #151F29; border: 1px solid #26313C; border-radius: 18px; padding: 24px 24px 20px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .options-col { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+  .option-btn { text-align: left; padding: 14px 16px; border-radius: 12px; font-size: 14.5px; line-height: 1.45; cursor: pointer; font-family: inherit; color: #E8ECEF; background: #151F29; border: 1px solid #26313C; transition: all .15s ease; }
+  .option-btn.correct { background: #1B3A2E; border-color: #4FD1C5; color: #B7F5E8; }
+  .option-btn.wrong { background: #3A1F1F; border-color: #E06666; color: #F5C4C4; }
+  .option-btn.dim { background: #131A22; border-color: #1E2933; color: #5C6A75; }
+  .next-btn { width: 100%; margin-top: 16px; padding: 13px 0; border-radius: 10px; border: 1px solid #F2A65A; background: #F2A65A20; color: #F2A65A; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .skip-btn { width: 100%; margin-top: 16px; padding: 12px 0; border-radius: 10px; border: 1px solid #26313C; background: transparent; color: #7C8B99; font-size: 13.5px; cursor: pointer; font-family: inherit; }
+  .result-skipped { font-size: 12.5px; color: #7C8B99; }
+  .result-box { width: 100%; background: #151F29; border: 1px solid #26313C; border-radius: 18px; padding: 28px 26px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .result-score { font-size: 22px; font-weight: 700; color: #E8ECEF; }
+  .result-pct { font-size: 14px; color: #4FD1C5; font-family: ui-monospace, monospace; margin-bottom: 8px; }
+  .wrong-list { width: 100%; margin-top: 10px; display: flex; flex-direction: column; gap: 12px; }
+  .wrong-list-title { font-size: 12.5px; color: #7C8B99; font-family: ui-monospace, monospace; margin-bottom: 2px; }
+  .summary-box { width: 100%; margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .summary-row { display: flex; align-items: center; gap: 8px; }
+  .summary-cat-name { font-size: 12px; color: #B7C2CC; width: 130px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .summary-bar-track { flex: 1; height: 6px; background: #1C2733; border-radius: 4px; overflow: hidden; }
+  .summary-bar-fill { height: 100%; border-radius: 4px; transition: width .3s ease; }
+  .summary-cat-count { font-size: 11.5px; color: #7C8B99; font-family: ui-monospace, monospace; width: 34px; text-align: right; flex-shrink: 0; }
+  .summary-focus { font-size: 12.5px; color: #F2A65A; margin-top: 4px; font-weight: 600; }
+  .wrong-item { background: #131A22; border: 1px solid #1E2933; border-radius: 10px; padding: 12px 14px; }
+  .wrong-q { font-size: 13.5px; color: #DCE3E8; margin-bottom: 6px; }
+  .wrong-your { font-size: 12.5px; color: #E06666; margin-bottom: 2px; }
+  .wrong-correct { font-size: 12.5px; color: #4FD1C5; }
+  .restart-btn { margin-top: 18px; display: flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 10px; border: 1px solid #26313C; background: #1C2733; color: #E8ECEF; font-size: 14px; cursor: pointer; font-family: inherit; }
 </style>
 </head>
 <body>
@@ -83,6 +113,11 @@
       </div>
     </div>
     <button class="menu-btn" id="menuBtn">Themen ▼</button>
+  </div>
+
+  <div class="mode-row">
+    <button class="mode-btn" id="modeCardsBtn">Karteikarten</button>
+    <button class="mode-btn" id="modeQuizBtn">Quiz</button>
   </div>
 
   <div class="tab-row" id="tabRow"></div>
@@ -129,6 +164,32 @@
       <button class="nav-btn" id="btnShuffle">⇄</button>
       <button class="nav-btn" id="btnReset">↺</button>
       <button class="nav-btn" id="btnNext">›</button>
+    </div>
+  </div>
+
+  <div id="quizArea" style="display:none;">
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="quizProgressFill" style="background: linear-gradient(90deg,#F2A65A,#D98A3D);"></div></div>
+      <div class="progress-label" id="quizProgressLabel"></div>
+    </div>
+
+    <div class="quiz-card" id="quizQuestionCard" style="display:none;">
+      <div class="cat-label" id="quizCatLabel"></div>
+      <div class="q-text" id="quizQText"></div>
+    </div>
+
+    <div class="options-col" id="quizOptions"></div>
+
+    <button class="skip-btn" id="quizSkipBtn">Überspringen</button>
+    <button class="next-btn" id="quizNextBtn" style="display:none;"></button>
+
+    <div class="result-box" id="quizResultBox" style="display:none;">
+      <div class="result-score" id="quizResultScore"></div>
+      <div class="result-skipped" id="quizResultSkipped" style="display:none;"></div>
+      <div class="result-pct" id="quizResultPct"></div>
+      <div class="summary-box" id="quizSummaryBox"></div>
+      <div class="wrong-list" id="quizWrongList"></div>
+      <button class="restart-btn" id="quizRestartBtn">↺ Neu starten</button>
     </div>
   </div>
 </div>
@@ -746,15 +807,81 @@ TABS.forEach(t => {
     pos: 0,
     flipped: false,
     known: {},
+    quiz: null,
   };
 });
 
 let activeTab = TABS[0].id;
 let showMenu = false;
 let touchStartX = null;
+let mode = "cards";
 
 function currentTab() { return TABS.find(t => t.id === activeTab); }
 function currentState() { return state[activeTab]; }
+
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildQuizQuestions(tab, activeCats) {
+  if (tab.id === "hex") regenerateHexPracticeCards();
+  const filtered = tab.deck.filter(c => activeCats.has(c.cat));
+  const pool = filtered.length >= 4 ? filtered : tab.deck;
+  const questions = filtered.map(card => {
+    if (tab.id === "hex" && card.cat === "Übung: Hex → Dezimal") {
+      const hexMatch = card.q.match(/Hexadezimalzahl (\w+) in/);
+      const valMatch = card.a.match(/=\s*(\d+)\s*$/);
+      const correctVal = valMatch ? parseInt(valMatch[1], 10) : 0;
+      const wrongVals = new Set();
+      let attempts = 0;
+      while (wrongVals.size < 3 && attempts < 50) {
+        attempts++;
+        const offset = Math.floor(Math.random() * 40) + 1;
+        const sign = Math.random() < 0.5 ? -1 : 1;
+        const candidate = correctVal + sign * offset;
+        if (candidate >= 0 && candidate !== correctVal) wrongVals.add(candidate);
+      }
+      const optionVals = shuffleArray([correctVal, ...wrongVals]);
+      return { cat: card.cat, q: card.q, options: optionVals.map(String), correctIndex: optionVals.indexOf(correctVal) };
+    }
+    const correct = card.a;
+    const candidates = [...new Set(pool.map(c => c.a).filter(a => a !== correct))];
+    const wrongs = shuffleArray(candidates).slice(0, 3);
+    const options = shuffleArray([correct, ...wrongs]);
+    return { cat: card.cat, q: card.q, options, correctIndex: options.indexOf(correct) };
+  });
+  return shuffleArray(questions);
+}
+
+function buildQuiz(tabId) {
+  const tab = TABS.find(t => t.id === tabId);
+  const st = state[tabId];
+  const questions = buildQuizQuestions(tab, st.activeCats);
+  st.quiz = { questions, pos: 0, selected: null, answered: false, score: 0, skipped: 0, wrongList: [], skippedList: [], finished: questions.length === 0 };
+}
+
+function getCategoryStats(quiz) {
+  const catTotals = {};
+  quiz.questions.forEach(q => { catTotals[q.cat] = (catTotals[q.cat] || 0) + 1; });
+  const wrongByCategory = {};
+  quiz.wrongList.forEach(w => { wrongByCategory[w.cat] = (wrongByCategory[w.cat] || 0) + 1; });
+  const skippedByCategory = {};
+  (quiz.skippedList || []).forEach(s => { skippedByCategory[s.cat] = (skippedByCategory[s.cat] || 0) + 1; });
+  const stats = Object.keys(catTotals).map(cat => {
+    const total = catTotals[cat];
+    const wrong = wrongByCategory[cat] || 0;
+    const skippedC = skippedByCategory[cat] || 0;
+    const correct = total - wrong - skippedC;
+    return { cat, total, correct, wrong, skipped: skippedC };
+  });
+  stats.sort((a, b) => a.correct / a.total - b.correct / b.total);
+  return stats;
+}
 
 function filteredIndices(tab, st) {
   return tab.deck.map((c, i) => ({ ...c, i })).filter(c => st.activeCats.has(c.cat)).map(c => c.i);
@@ -767,7 +894,11 @@ function renderTabs() {
     const btn = document.createElement("button");
     btn.className = "tab-btn" + (t.id === activeTab ? " active" : "");
     btn.textContent = t.label;
-    btn.onclick = () => { activeTab = t.id; renderAll(); };
+    btn.onclick = () => {
+      activeTab = t.id;
+      if (mode === "quiz" && !state[t.id].quiz) buildQuiz(t.id);
+      renderAll();
+    };
     row.appendChild(btn);
   });
 }
@@ -791,6 +922,7 @@ function renderCatPanel() {
       st.order = filteredIndices(tab, st);
       st.pos = 0;
       st.flipped = false;
+      if (mode === "quiz") buildQuiz(activeTab);
       renderAll();
     };
     panel.appendChild(chip);
@@ -838,8 +970,203 @@ function renderCard() {
 function renderAll() {
   renderTabs();
   renderCatPanel();
-  renderCard();
+  document.getElementById("modeCardsBtn").classList.toggle("active-cards", mode === "cards");
+  document.getElementById("modeQuizBtn").classList.toggle("active-quiz", mode === "quiz");
+  if (mode === "cards") {
+    document.getElementById("cardArea").style.display = "block";
+    document.getElementById("quizArea").style.display = "none";
+    renderCard();
+  } else {
+    document.getElementById("cardArea").style.display = "none";
+    document.getElementById("emptyState").style.display = "none";
+    document.getElementById("quizArea").style.display = "block";
+    renderQuiz();
+  }
 }
+
+function renderQuiz() {
+  const st = currentState();
+  const quiz = st.quiz;
+  const progressLabel = document.getElementById("quizProgressLabel");
+  const progressFill = document.getElementById("quizProgressFill");
+  const qCard = document.getElementById("quizQuestionCard");
+  const optionsCol = document.getElementById("quizOptions");
+  const nextBtn = document.getElementById("quizNextBtn");
+  const resultBox = document.getElementById("quizResultBox");
+
+  if (!quiz || quiz.questions.length === 0) {
+    qCard.style.display = "none";
+    optionsCol.innerHTML = "";
+    nextBtn.style.display = "none";
+    document.getElementById("quizSkipBtn").style.display = "none";
+    resultBox.style.display = "none";
+    progressLabel.textContent = "";
+    progressFill.style.width = "0%";
+    document.getElementById("emptyState").style.display = "block";
+    document.getElementById("emptyState").textContent = "Keine Fragen in der Auswahl.";
+    return;
+  }
+  document.getElementById("emptyState").style.display = "none";
+
+  if (quiz.finished) {
+    qCard.style.display = "none";
+    optionsCol.innerHTML = "";
+    nextBtn.style.display = "none";
+    document.getElementById("quizSkipBtn").style.display = "none";
+    progressLabel.textContent = "";
+    progressFill.style.width = "100%";
+    resultBox.style.display = "flex";
+    document.getElementById("quizResultScore").textContent = `${quiz.score} / ${quiz.questions.length} richtig`;
+    const skippedEl = document.getElementById("quizResultSkipped");
+    if (quiz.skipped > 0) {
+      skippedEl.style.display = "block";
+      skippedEl.textContent = `${quiz.skipped} übersprungen`;
+    } else {
+      skippedEl.style.display = "none";
+    }
+    document.getElementById("quizResultPct").textContent = `${Math.round((quiz.score / quiz.questions.length) * 100)}%`;
+
+    const summaryBox = document.getElementById("quizSummaryBox");
+    summaryBox.innerHTML = "";
+    const catStats = getCategoryStats(quiz);
+    if (catStats.length >= 2) {
+      const title = document.createElement("div");
+      title.className = "wrong-list-title";
+      title.textContent = "Zusammenfassung nach Thema:";
+      summaryBox.appendChild(title);
+      catStats.forEach(s => {
+        const ratio = s.correct / s.total;
+        const row = document.createElement("div");
+        row.className = "summary-row";
+        row.innerHTML = `<div class="summary-cat-name"></div><div class="summary-bar-track"><div class="summary-bar-fill"></div></div><div class="summary-cat-count"></div>`;
+        row.children[0].textContent = s.cat;
+        const fill = row.querySelector(".summary-bar-fill");
+        fill.style.width = `${ratio * 100}%`;
+        fill.style.background = ratio < 0.5 ? "#E06666" : ratio < 0.8 ? "#F2A65A" : "#4FD1C5";
+        row.children[2].textContent = `${s.correct}/${s.total}`;
+        summaryBox.appendChild(row);
+      });
+      const weakest = catStats[0];
+      if (weakest.correct / weakest.total < 1) {
+        const focus = document.createElement("div");
+        focus.className = "summary-focus";
+        focus.textContent = "Fokussiere dich als nächstes auf: " + weakest.cat;
+        summaryBox.appendChild(focus);
+      }
+    }
+
+    const wrongListEl = document.getElementById("quizWrongList");
+    wrongListEl.innerHTML = "";
+    if (quiz.wrongList.length > 0) {
+      const title = document.createElement("div");
+      title.className = "wrong-list-title";
+      title.textContent = "Zum Nacharbeiten:";
+      wrongListEl.appendChild(title);
+      quiz.wrongList.forEach(w => {
+        const item = document.createElement("div");
+        item.className = "wrong-item";
+        item.innerHTML = `<div class="wrong-q"></div><div class="wrong-your"></div><div class="wrong-correct"></div>`;
+        item.children[0].textContent = w.q;
+        item.children[1].textContent = "Deine Antwort: " + w.yourAnswer;
+        item.children[2].textContent = "Richtig: " + w.correct;
+        wrongListEl.appendChild(item);
+      });
+    }
+    return;
+  }
+
+  resultBox.style.display = "none";
+  qCard.style.display = "flex";
+  const q = quiz.questions[quiz.pos];
+  progressFill.style.width = `${((quiz.pos + 1) / quiz.questions.length) * 100}%`;
+  progressLabel.textContent = `Frage ${quiz.pos + 1} / ${quiz.questions.length}   ·   Punkte: ${quiz.score}`;
+  document.getElementById("quizCatLabel").textContent = q.cat;
+  document.getElementById("quizQText").textContent = q.q;
+
+  optionsCol.innerHTML = "";
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement("button");
+    let variant = "";
+    if (quiz.answered) {
+      if (i === q.correctIndex) variant = " correct";
+      else if (i === quiz.selected) variant = " wrong";
+      else variant = " dim";
+    }
+    btn.className = "option-btn" + variant;
+    btn.textContent = opt;
+    btn.disabled = quiz.answered;
+    btn.onclick = () => selectAnswer(i);
+    optionsCol.appendChild(btn);
+  });
+
+  nextBtn.style.display = quiz.answered ? "block" : "none";
+  nextBtn.textContent = quiz.pos + 1 >= quiz.questions.length ? "Ergebnis anzeigen" : "Weiter";
+  document.getElementById("quizSkipBtn").style.display = quiz.answered ? "none" : "block";
+}
+
+function selectAnswer(optionIndex) {
+  const st = currentState();
+  const quiz = st.quiz;
+  if (!quiz || quiz.answered) return;
+  const q = quiz.questions[quiz.pos];
+  const isCorrect = optionIndex === q.correctIndex;
+  quiz.selected = optionIndex;
+  quiz.answered = true;
+  if (isCorrect) {
+    quiz.score++;
+  } else {
+    quiz.wrongList.push({ cat: q.cat, q: q.q, yourAnswer: q.options[optionIndex], correct: q.options[q.correctIndex] });
+  }
+  renderQuiz();
+}
+
+function nextQuestion() {
+  const st = currentState();
+  const quiz = st.quiz;
+  if (!quiz) return;
+  quiz.pos++;
+  if (quiz.pos >= quiz.questions.length) {
+    quiz.finished = true;
+  } else {
+    quiz.selected = null;
+    quiz.answered = false;
+  }
+  renderQuiz();
+}
+
+function skipQuestion() {
+  const st = currentState();
+  const quiz = st.quiz;
+  if (!quiz) return;
+  const q = quiz.questions[quiz.pos];
+  quiz.skipped = (quiz.skipped || 0) + 1;
+  quiz.skippedList = quiz.skippedList || [];
+  quiz.skippedList.push({ cat: q.cat, q: q.q });
+  quiz.pos++;
+  if (quiz.pos >= quiz.questions.length) {
+    quiz.finished = true;
+  } else {
+    quiz.selected = null;
+    quiz.answered = false;
+  }
+  renderQuiz();
+}
+
+document.getElementById("quizNextBtn").onclick = nextQuestion;
+document.getElementById("quizSkipBtn").onclick = skipQuestion;
+document.getElementById("quizRestartBtn").onclick = () => {
+  buildQuiz(activeTab);
+  renderQuiz();
+};
+document.getElementById("modeCardsBtn").onclick = () => {
+  mode = "cards";
+  renderAll();
+};
+document.getElementById("modeQuizBtn").onclick = () => {
+  mode = "quiz";
+  if (!state[activeTab].quiz) buildQuiz(activeTab);
+  renderAll();
+};
 
 function next() {
   const st = currentState();
